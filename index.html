@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Device Remote Control</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .container { background: #fff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 90%; max-width: 400px; }
+        h1 { font-size: 1.8em; margin-top: 0; color: #1c1e21; }
+        h2 { font-size: 1.2em; color: #606770; border-bottom: 1px solid #ddd; padding-bottom: 8px; margin-top: 20px; }
+        p { display: flex; justify-content: space-between; margin: 12px 0; font-size: 1.1em; }
+        .label { color: #606770; }
+        .value { font-weight: 600; color: #1c1e21; padding: 3px 8px; border-radius: 6px; transition: background-color 0.5s; }
+        .btn-group { display: flex; justify-content: space-between; margin-top: 15px; }
+        .btn { flex-grow: 1; padding: 18px 10px; font-size: 1.2em; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; transition: background-color 0.2s; }
+        .btn:first-child { margin-right: 10px; }
+        .btn-on { background-color: #42b72a; color: white; }
+        .btn-on:hover { background-color: #36a420; }
+        .btn-off { background-color: #fa3e3e; color: white; }
+        .btn-off:hover { background-color: #e03030; }
+        .status-on { color: #42b72a; }
+        .status-off { color: #fa3e3e; }
+        .status-high { color: #1877f2; }
+        .status-low { color: #606770; }
+        #mqtt_status { font-weight: bold; }
+
+        .device-selector { display: flex; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #ddd; padding-bottom: 20px; }
+        #deviceSelect { flex-grow: 1; font-size: 1.1em; padding: 10px; border-radius: 6px; border: 1px solid #ccc; }
+        .device-selector button { font-size: 1.5em; width: 40px; height: 40px; margin-left: 8px; border: none; background-color: #e4e6eb; border-radius: 50%; cursor: pointer; }
+        .device-selector button:hover { background-color: #d8dbdf; }
+    </style>
+    <!-- Paho MQTT Client Library from CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.1.0/paho-mqtt.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Remote Control</h1>
+
+        <div class="device-selector">
+            <select id="deviceSelect"></select>
+            <button id="addDeviceBtn" title="Add new device">+</button>
+            <button id="editDeviceBtn" title="Edit selected device">✎</button>
+            <button id="deleteDeviceBtn" title="Delete selected device">🗑</button>
+        </div>
+
+        <p><span class="label">MQTT Status:</span> <span id="mqtt_status" class="value">--</span></p>
+        <p><span class="label">Last Update:</span> <span id="last_update" class="value">--</span></p>
+        
+        <h2>Device Status</h2>
+        <p><span class="label">Device Time:</span> <span id="device_time" class="value">--</span></p>
+        <p><span class="label">App Status:</span> <span id="app_status" class="value">--</span></p>
+        <p><span class="label">Error Code:</span> <span id="error_code" class="value">--</span></p>
+
+        <h2>Sensors</h2>
+        <p><span class="label">Input (GP15):</span> <span id="li_state" class="value">--</span></p>
+        <p><span class="label">Temperature:</span> <span id="temp_adc1_c_val" class="value">-- &deg;C</span></p>
+        <p><span class="label">Soil Moisture:</span> <span id="adc0_val" class="value">-- mV</span></p>
+        
+        <h2>GPIO Output (GP2)</h2>
+        <p><span class="label">State:</span> <span id="lo_state" class="value">--</span></p>
+        <div class="btn-group">
+            <button type="button" id="lo_on_btn" class="btn btn-on">Turn ON</button>
+            <button type="button" id="lo_off_btn" class="btn btn-off">Turn OFF</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            let currentDeviceConfig = null;
+
+            let mqttClient = null;
+            let stalenessTimer = null;
+            // デフォルトの更新間隔60秒の1.5倍強に設定
+            const STALE_DATA_TIMEOUT_MS = 95000; 
+
+            function updateUI(id, value, className = null) {
+                const element = document.getElementById(id);
+                if (element) {
+                    const newClassName = className ? 'value ' + className : 'value';
+                    // 値またはクラス名が変更された場合にのみUIを更新し、ハイライトする
+                    if (element.innerHTML !== value || element.className !== newClassName) {
+                        element.innerHTML = value;
+                        element.className = newClassName;
+                        // ローカルWeb UIと同様のハイライト効果を適用
+                        element.style.backgroundColor = '#cce5ff';
+                        setTimeout(() => { element.style.backgroundColor = ''; }, 2000);
+                    }
+                }
+            }
+
+            function onMessageArrived(message) {
+                try {
+                    // --- 1. 最終更新時刻と鮮度を更新 ---
+                    const now = new Date();
+                    const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+                    updateUI('last_update', `Received at ${timeString}`);
+                    document.getElementById('last_update').className = 'value'; // 警告色をリセット
+
+                    // 古い警告タイマーを解除し、新しいタイマーを設定
+                    if (stalenessTimer) {
+                        clearTimeout(stalenessTimer);
+                    }
+                    stalenessTimer = setTimeout(() => {
+                        // このタイマーが作動するということは、一定時間データが来ていないということ
+                        updateUI('last_update', 'Data is stale. Check device.', 'status-off');
+                    }, STALE_DATA_TIMEOUT_MS);
+
+                    // --- 2. 受信したデータを画面に表示 ---
+                    const data = JSON.parse(message.payloadString);
+                    const fields = {
+                        'device_time': data.device_time,
+                        'app_status': data.app_status,
+                        'error_code': data.error_code,
+                        'li_state': { value: data.li_state, className: data.li_class },
+                        'temp_adc1_c_val': { value: `${data.temp_adc1_c_val} &deg;C` },
+                        'adc0_val': { value: `${data.adc0_val} mV` },
+                        'lo_state': { value: data.lo_state, className: data.lo_class }
+                    };
+                    for (const id in fields) {
+                        const field = fields[id];
+                        if (typeof field === 'object' && field !== null) {
+                            updateUI(id, field.value, field.className);
+                        } else {
+                            updateUI(id, field);
+                        }
+                    }
+                } catch (e) {
+                    console.error("Error parsing MQTT message:", e);
+                }
+            }
+
+            function publishMqttCommand(command) {
+                if (currentDeviceConfig && mqttClient && mqttClient.isConnected()) {
+                    const message = new Paho.Message(JSON.stringify(command));
+                    message.destinationName = `devices/${currentDeviceConfig.deviceId}/control`;
+                    mqttClient.send(message);
+                } else {
+                    alert("MQTT not connected. Cannot send command.");
+                }
+            }
+
+            // --- Event Listeners ---
+            document.getElementById('lo_on_btn').addEventListener('click', () => publishMqttCommand({lo: {bit: 0, value: 1}}));
+            document.getElementById('lo_off_btn').addEventListener('click', () => publishMqttCommand({lo: {bit: 0, value: 0}}));
+            document.getElementById('addDeviceBtn').addEventListener('click', handleAddDevice);
+            document.getElementById('editDeviceBtn').addEventListener('click', handleEditDevice);
+            document.getElementById('deleteDeviceBtn').addEventListener('click', handleDeleteDevice);
+            document.getElementById('deviceSelect').addEventListener('change', handleDeviceChange);
+
+            function connectToDevice(deviceConfig) {
+                if (!deviceConfig) return;
+
+                currentDeviceConfig = deviceConfig;
+                localStorage.setItem('picoRemoteLastSelected', deviceConfig.deviceId);
+
+                if (mqttClient && mqttClient.isConnected()) {
+                    mqttClient.disconnect();
+                }
+
+                const clientId = "remote-control-" + Math.random().toString(36).substring(2, 15);
+                mqttClient = new Paho.Client(deviceConfig.broker, Number(deviceConfig.ws_port), clientId);
+
+                mqttClient.onConnectionLost = (response) => {
+                    if (response.errorCode !== 0) {
+                        updateUI('mqtt_status', `Connection Lost: ${response.errorMessage}`, 'status-off');
+                        // ブローカーとの接続が切れたら、警告タイマーも停止
+                        if (stalenessTimer) {
+                            clearTimeout(stalenessTimer);
+                        }
+                        updateUI('last_update', 'Broker connection lost.', 'status-off');
+                    }
+                };
+                mqttClient.onMessageArrived = onMessageArrived;
+
+                const connectOptions = {
+                    onSuccess: () => {
+                        updateUI('mqtt_status', 'Connected', 'status-on');
+                        mqttClient.subscribe(`devices/${deviceConfig.deviceId}/status`);
+                    },
+                    onFailure: (response) => {
+                        updateUI('mqtt_status', `Failed: ${response.errorMessage}`, 'status-off');
+                    },
+                    userName: deviceConfig.username,
+                    password: deviceConfig.password,
+                    useSSL: true,
+                    reconnect: true
+                };
+                updateUI('mqtt_status', 'Connecting...');
+                mqttClient.connect(connectOptions);
+            }
+
+            // --- Device Management ---
+            function loadDevices() {
+                const saved = localStorage.getItem('picoRemoteDevices');
+                return saved ? JSON.parse(saved) : [];
+            }
+
+            function saveDevices(devices) {
+                localStorage.setItem('picoRemoteDevices', JSON.stringify(devices));
+            }
+
+            function populateDeviceSelector(devices, selectedDeviceId) {
+                const select = document.getElementById('deviceSelect');
+                select.innerHTML = '';
+                devices.forEach(device => {
+                    const option = document.createElement('option');
+                    option.value = device.deviceId;
+                    option.textContent = device.name;
+                    if (device.deviceId === selectedDeviceId) {
+                        option.selected = true;
+                    }
+                    select.appendChild(option);
+                });
+            }
+
+            function handleAddDevice() {
+                const name = prompt("Enter a nickname for the new device:");
+                if (!name) return;
+                const deviceId = prompt("Enter the Device ID:");
+                if (!deviceId) return;
+                const password = prompt("Enter the MQTT Password:");
+                if (password === null) return;
+                
+                const newConfig = {
+                    name: name.trim(),
+                    deviceId: deviceId.trim(),
+                    password: password,
+                    broker: '51f4e1b27e7b40aeb363a5b7d533ff97.s1.eu.hivemq.cloud',
+                    ws_port: 8884,
+                    username: 'WFL_user'
+                };
+
+                const devices = loadDevices();
+                devices.push(newConfig);
+                saveDevices(devices);
+                populateDeviceSelector(devices, newConfig.deviceId);
+                connectToDevice(newConfig);
+            }
+
+            function handleEditDevice() {
+                const selectedId = document.getElementById('deviceSelect').value;
+                if (!selectedId) {
+                    alert("No device selected to edit.");
+                    return;
+                }
+                let devices = loadDevices();
+                const deviceIndex = devices.findIndex(d => d.deviceId === selectedId);
+                if (deviceIndex === -1) return;
+
+                const device = devices[deviceIndex];
+                const newName = prompt("Enter new nickname:", device.name);
+                if (!newName) return;
+                const newPassword = prompt("Enter new MQTT password (leave blank to keep current):");
+
+                devices[deviceIndex].name = newName.trim();
+                if (newPassword !== null && newPassword !== "") {
+                    devices[deviceIndex].password = newPassword;
+                }
+
+                saveDevices(devices);
+                populateDeviceSelector(devices, selectedId);
+                // Reconnect with new credentials if password was changed
+                connectToDevice(devices[deviceIndex]);
+            }
+
+            function handleDeleteDevice() {
+                const selectedId = document.getElementById('deviceSelect').value;
+                if (!selectedId) {
+                    alert("No device selected to delete.");
+                    return;
+                }
+                if (!confirm(`Are you sure you want to delete the device "${document.getElementById('deviceSelect').options[document.getElementById('deviceSelect').selectedIndex].text}"?`)) {
+                    return;
+                }
+
+                let devices = loadDevices();
+                devices = devices.filter(d => d.deviceId !== selectedId);
+                saveDevices(devices);
+                
+                // Reload the page to connect to the first available device or prompt for a new one
+                location.reload();
+            }
+
+            function handleDeviceChange() {
+                const selectedId = document.getElementById('deviceSelect').value;
+                const devices = loadDevices();
+                const selectedDevice = devices.find(d => d.deviceId === selectedId);
+                connectToDevice(selectedDevice);
+            }
+
+            // --- Initial Execution ---
+            let devices = loadDevices();
+            if (devices.length === 0) {
+                alert("No devices configured. Let's add your first one.");
+                handleAddDevice();
+            } else {
+                const lastSelectedId = localStorage.getItem('picoRemoteLastSelected');
+                populateDeviceSelector(devices, lastSelectedId);
+                handleDeviceChange(); // Connect to the selected device
+            }
+        });
+    </script>
+</body>
+</html>
