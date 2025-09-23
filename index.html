@@ -29,6 +29,55 @@
         #deviceSelect { flex-grow: 1; font-size: 1.1em; padding: 10px; border-radius: 6px; border: 1px solid #ccc; }
         .device-selector button { font-size: 1.5em; width: 40px; height: 40px; margin-left: 8px; border: none; background-color: #e4e6eb; border-radius: 50%; cursor: pointer; }
         .device-selector button:hover { background-color: #d8dbdf; }
+
+        /* Modal Styles */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: #fff;
+            padding: 20px 30px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 450px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .modal-content h2 { margin-top: 0; border-bottom: none; }
+        #deviceForm label {
+            display: block;
+            margin-top: 15px;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #606770;
+            font-size: 0.9em;
+        }
+        #deviceForm input[type="text"],
+        #deviceForm input[type="password"],
+        #deviceForm input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            font-size: 1em;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
+        #deviceForm small { font-size: 0.8em; color: #606770; display: block; margin-top: 3px; }
+        .modal-buttons { display: flex; justify-content: flex-end; margin-top: 25px; }
+        .modal-buttons button { padding: 10px 20px; border-radius: 8px; border: none; font-size: 1em; font-weight: bold; cursor: pointer; transition: background-color 0.2s; }
+        .modal-buttons #cancelDeviceBtn { background-color: #e4e6eb; color: #1c1e21; margin-right: 10px; }
+        .modal-buttons #cancelDeviceBtn:hover { background-color: #d8dbdf; }
+        .modal-buttons #saveDeviceBtn { background-color: #1877f2; color: white; }
+        .modal-buttons #saveDeviceBtn:hover { background-color: #166fe5; }
     </style>
     <!-- Paho MQTT Client Library from CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.1.0/paho-mqtt.min.js"></script>
@@ -49,6 +98,8 @@
         
         <h2>Device Status</h2>
         <p><span class="label">Device Time:</span> <span id="device_time" class="value">--</span></p>
+        <p><span class="label">Uptime:</span> <span id="uptime" class="value">--</span></p>
+        <p><span class="label">Software Version:</span> <span id="soft_ver" class="value">--</span></p>
         <p><span class="label">App Status:</span> <span id="app_status" class="value">--</span></p>
         <p><span class="label">Error Code:</span> <span id="error_code" class="value">--</span></p>
 
@@ -62,6 +113,39 @@
         <div class="btn-group">
             <button type="button" id="lo_on_btn" class="btn btn-on">Turn ON</button>
             <button type="button" id="lo_off_btn" class="btn btn-off">Turn OFF</button>
+        </div>
+    </div>
+
+    <div id="deviceModal" class="modal">
+        <div class="modal-content">
+            <h2 id="modalTitle">Add Device</h2>
+            <form id="deviceForm">
+                <input type="hidden" id="editDeviceId">
+                
+                <label for="deviceName">Nickname</label>
+                <input type="text" id="deviceName" required>
+
+                <label for="deviceId">Device ID</label>
+                <input type="text" id="deviceId" required>
+
+                <label for="devicePassword">MQTT Password</label>
+                <input type="password" id="devicePassword">
+                <small>Leave blank to keep current password when editing.</small>
+
+                <label for="deviceBroker">MQTT Broker Host</label>
+                <input type="text" id="deviceBroker" required>
+
+                <label for="deviceWsPort">MQTT WebSocket Port</label>
+                <input type="number" id="deviceWsPort" required>
+
+                <label for="deviceUsername">MQTT Username</label>
+                <input type="text" id="deviceUsername">
+
+                <div class="modal-buttons">
+                    <button type="button" id="cancelDeviceBtn">Cancel</button>
+                    <button type="submit" id="saveDeviceBtn">Save</button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -89,6 +173,30 @@
                 }
             }
 
+            function resetDisplay() {
+                const fieldsToReset = {
+                    'uptime': '--',
+                    'soft_ver': '--',
+                    'device_time': '--',
+                    'app_status': '--',
+                    'error_code': '--',
+                    'li_state': { value: '--', className: '' },
+                    'temp_adc1_c_val': { value: '-- &deg;C' },
+                    'adc0_val': { value: '-- mV' },
+                    'lo_state': { value: '--', className: '' },
+                    'last_update': '--',
+                    'mqtt_status': '--'
+                };
+
+                for (const id in fieldsToReset) {
+                    const field = fieldsToReset[id];
+                    updateUI(id, (field.value !== undefined ? field.value : field), field.className || '');
+                }
+                if (stalenessTimer) {
+                    clearTimeout(stalenessTimer);
+                }
+            }
+
             function onMessageArrived(message) {
                 try {
                     // --- 1. 最終更新時刻と鮮度を更新 ---
@@ -109,6 +217,8 @@
                     // --- 2. 受信したデータを画面に表示 ---
                     const data = JSON.parse(message.payloadString);
                     const fields = {
+                        'uptime': data.uptime,
+                        'soft_ver': data.soft_ver,
                         'device_time': data.device_time,
                         'app_status': data.app_status,
                         'error_code': data.error_code,
@@ -143,16 +253,30 @@
             // --- Event Listeners ---
             document.getElementById('lo_on_btn').addEventListener('click', () => publishMqttCommand({lo: {bit: 0, value: 1}}));
             document.getElementById('lo_off_btn').addEventListener('click', () => publishMqttCommand({lo: {bit: 0, value: 0}}));
-            document.getElementById('addDeviceBtn').addEventListener('click', handleAddDevice);
-            document.getElementById('editDeviceBtn').addEventListener('click', handleEditDevice);
+            
+            document.getElementById('addDeviceBtn').addEventListener('click', () => showDeviceModal());
+            document.getElementById('editDeviceBtn').addEventListener('click', () => {
+                const selectedId = document.getElementById('deviceSelect').value;
+                if (!selectedId) {
+                    alert("No device selected to edit.");
+                    return;
+                }
+                const devices = loadDevices();
+                const selectedDevice = devices.find(d => d.deviceId === selectedId);
+                if (selectedDevice) {
+                    showDeviceModal(selectedDevice);
+                }
+            });
             document.getElementById('deleteDeviceBtn').addEventListener('click', handleDeleteDevice);
             document.getElementById('deviceSelect').addEventListener('change', handleDeviceChange);
-
+            document.getElementById('cancelDeviceBtn').addEventListener('click', hideDeviceModal);
+            document.getElementById('deviceForm').addEventListener('submit', handleSaveDevice);
+            
             function connectToDevice(deviceConfig) {
                 if (!deviceConfig) return;
 
                 currentDeviceConfig = deviceConfig;
-                localStorage.setItem('picoRemoteLastSelected', deviceConfig.deviceId);
+                localStorage.setItem('deviceRemoteLastSelected', deviceConfig.deviceId);
 
                 if (mqttClient && mqttClient.isConnected()) {
                     mqttClient.disconnect();
@@ -192,12 +316,12 @@
 
             // --- Device Management ---
             function loadDevices() {
-                const saved = localStorage.getItem('picoRemoteDevices');
+                const saved = localStorage.getItem('deviceRemoteDevices');
                 return saved ? JSON.parse(saved) : [];
             }
 
             function saveDevices(devices) {
-                localStorage.setItem('picoRemoteDevices', JSON.stringify(devices));
+                localStorage.setItem('deviceRemoteDevices', JSON.stringify(devices));
             }
 
             function populateDeviceSelector(devices, selectedDeviceId) {
@@ -214,54 +338,79 @@
                 });
             }
 
-            function handleAddDevice() {
-                const name = prompt("Enter a nickname for the new device:");
-                if (!name) return;
-                const deviceId = prompt("Enter the Device ID:");
-                if (!deviceId) return;
-                const password = prompt("Enter the MQTT Password:");
-                if (password === null) return;
-                
-                const newConfig = {
-                    name: name.trim(),
-                    deviceId: deviceId.trim(),
-                    password: password,
-                    broker: '51f4e1b27e7b40aeb363a5b7d533ff97.s1.eu.hivemq.cloud',
-                    ws_port: 8884,
-                    username: 'WFL_user'
-                };
+            function showDeviceModal(device = null) {
+                const form = document.getElementById('deviceForm');
+                form.reset();
 
-                const devices = loadDevices();
-                devices.push(newConfig);
-                saveDevices(devices);
-                populateDeviceSelector(devices, newConfig.deviceId);
-                connectToDevice(newConfig);
+                const modalTitle = document.getElementById('modalTitle');
+                const editDeviceIdInput = document.getElementById('editDeviceId');
+                const deviceIdInput = document.getElementById('deviceId');
+
+                if (device) { // Editing
+                    modalTitle.textContent = 'Edit Device';
+                    editDeviceIdInput.value = device.deviceId;
+                    
+                    document.getElementById('deviceName').value = device.name;
+                    deviceIdInput.value = device.deviceId;
+                    deviceIdInput.readOnly = true;
+                    document.getElementById('devicePassword').placeholder = 'Leave blank to keep current';
+                    document.getElementById('devicePassword').value = '';
+                    document.getElementById('deviceBroker').value = device.broker;
+                    document.getElementById('deviceWsPort').value = device.ws_port;
+                    document.getElementById('deviceUsername').value = device.username;
+                } else { // Adding
+                    modalTitle.textContent = 'Add New Device';
+                    editDeviceIdInput.value = '';
+                    deviceIdInput.readOnly = false;
+                    document.getElementById('devicePassword').placeholder = '';
+                }
+
+                document.getElementById('deviceModal').style.display = 'flex';
             }
 
-            function handleEditDevice() {
-                const selectedId = document.getElementById('deviceSelect').value;
-                if (!selectedId) {
-                    alert("No device selected to edit.");
+            function hideDeviceModal() {
+                document.getElementById('deviceModal').style.display = 'none';
+            }
+
+            function handleSaveDevice(event) {
+                event.preventDefault();
+
+                const editId = document.getElementById('editDeviceId').value;
+                const isEditing = !!editId;
+
+                const config = {
+                    name: document.getElementById('deviceName').value.trim(),
+                    deviceId: document.getElementById('deviceId').value.trim(),
+                    password: document.getElementById('devicePassword').value,
+                    broker: document.getElementById('deviceBroker').value.trim(),
+                    ws_port: Number(document.getElementById('deviceWsPort').value),
+                    username: document.getElementById('deviceUsername').value.trim()
+                };
+
+                if (!config.name || !config.deviceId || !config.broker || !config.ws_port) {
+                    alert('Please fill in all required fields.');
                     return;
                 }
+
                 let devices = loadDevices();
-                const deviceIndex = devices.findIndex(d => d.deviceId === selectedId);
-                if (deviceIndex === -1) return;
 
-                const device = devices[deviceIndex];
-                const newName = prompt("Enter new nickname:", device.name);
-                if (!newName) return;
-                const newPassword = prompt("Enter new MQTT password (leave blank to keep current):");
-
-                devices[deviceIndex].name = newName.trim();
-                if (newPassword !== null && newPassword !== "") {
-                    devices[deviceIndex].password = newPassword;
+                if (isEditing) {
+                    const deviceIndex = devices.findIndex(d => d.deviceId === editId);
+                    if (deviceIndex > -1) {
+                        if (!config.password) config.password = devices[deviceIndex].password;
+                        devices[deviceIndex] = config;
+                    }
+                } else {
+                    if (devices.some(d => d.deviceId === config.deviceId)) {
+                        alert('A device with this ID already exists.');
+                        return;
+                    }
+                    devices.push(config);
                 }
-
                 saveDevices(devices);
-                populateDeviceSelector(devices, selectedId);
-                // Reconnect with new credentials if password was changed
-                connectToDevice(devices[deviceIndex]);
+                populateDeviceSelector(devices, config.deviceId);
+                connectToDevice(config);
+                hideDeviceModal();
             }
 
             function handleDeleteDevice() {
@@ -283,6 +432,7 @@
             }
 
             function handleDeviceChange() {
+                resetDisplay(); // デバイス切り替え時に表示をリセット
                 const selectedId = document.getElementById('deviceSelect').value;
                 const devices = loadDevices();
                 const selectedDevice = devices.find(d => d.deviceId === selectedId);
@@ -293,9 +443,9 @@
             let devices = loadDevices();
             if (devices.length === 0) {
                 alert("No devices configured. Let's add your first one.");
-                handleAddDevice();
+                showDeviceModal();
             } else {
-                const lastSelectedId = localStorage.getItem('picoRemoteLastSelected');
+                const lastSelectedId = localStorage.getItem('deviceRemoteLastSelected');
                 populateDeviceSelector(devices, lastSelectedId);
                 handleDeviceChange(); // Connect to the selected device
             }
