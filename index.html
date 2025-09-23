@@ -162,9 +162,12 @@
                 const element = document.getElementById(id);
                 if (element) {
                     const newClassName = className ? 'value ' + className : 'value';
+                    // 比較と表示のために、受け取った値を文字列に変換する
+                    // これにより、 '0' (文字列) と 0 (数値) が異なると判断される問題を回避する
+                    const stringValue = (value === null || typeof value === 'undefined') ? element.innerHTML : String(value);
                     // 値またはクラス名が変更された場合にのみUIを更新し、ハイライトする
-                    if (element.innerHTML !== value || element.className !== newClassName) {
-                        element.innerHTML = value;
+                    if (element.innerHTML !== stringValue || element.className !== newClassName) {
+                        element.innerHTML = stringValue;
                         element.className = newClassName;
                         // ローカルWeb UIと同様のハイライト効果を適用
                         element.style.backgroundColor = '#cce5ff';
