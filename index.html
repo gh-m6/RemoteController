@@ -104,7 +104,8 @@
         <p><span class="label">Error Code:</span> <span id="error_code" class="value">--</span></p>
 
         <h2>Sensors</h2>
-        <p><span class="label">Input (GP15):</span> <span id="li_state" class="value">--</span></p>
+        <p><span class="label">Input (GP15):</span> <span id="li0_state" class="value">--</span></p>
+        <p><span class="label">Input (GP14):</span> <span id="li1_state" class="value">--</span></p>
         <p><span class="label">Temperature:</span> <span id="temp_adc1_c_val" class="value">-- &deg;C</span></p>
         <p><span class="label">Soil Moisture:</span> <span id="adc0_val" class="value">-- mV</span></p>
         
@@ -183,7 +184,8 @@
                     'device_time': '--',
                     'app_status': '--',
                     'error_code': '--',
-                    'li_state': { value: '--', className: '' },
+                    'li0_state': { value: '--', className: '' },
+                    'li1_state': { value: '--', className: '' },
                     'temp_adc1_c_val': { value: '-- &deg;C' },
                     'adc0_val': { value: '-- mV' },
                     'lo_state': { value: '--', className: '' },
@@ -225,7 +227,8 @@
                         'device_time': data.device_time,
                         'app_status': data.app_status,
                         'error_code': data.error_code,
-                        'li_state': { value: data.li_state, className: data.li_class },
+                        'li0_state': { value: data.li0_state, className: data.li0_class },
+                        'li1_state': { value: data.li1_state, className: data.li1_class },
                         'temp_adc1_c_val': { value: `${data.temp_adc1_c_val} &deg;C` },
                         'adc0_val': { value: `${data.adc0_val} mV` },
                         'lo_state': { value: data.lo_state, className: data.lo_class }
