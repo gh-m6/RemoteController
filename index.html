@@ -110,10 +110,19 @@
         <p><span class="label">Soil Moisture:</span> <span id="adc0_val" class="value">-- mV</span></p>
         
         <h2>GPIO Output (GP2)</h2>
-        <p><span class="label">State:</span> <span id="lo_state" class="value">--</span></p>
-        <div class="btn-group">
-            <button type="button" id="lo_on_btn" class="btn btn-on">Turn ON</button>
-            <button type="button" id="lo_off_btn" class="btn btn-off">Turn OFF</button>
+        <div style="margin-bottom: 15px;">
+            <p><span class="label">OUT0:</span> <span id="out0_state" class="value">--</span></p>
+            <div class="btn-group">
+                <button type="button" id="out0_on_btn" class="btn btn-on">Turn ON</button>
+                <button type="button" id="out0_off_btn" class="btn btn-off">Turn OFF</button>
+            </div>
+        </div>
+        <div>
+            <p><span class="label">OUT1:</span> <span id="out1_state" class="value">--</span></p>
+            <div class="btn-group">
+                <button type="button" id="out1_on_btn" class="btn btn-on">Turn ON</button>
+                <button type="button" id="out1_off_btn" class="btn btn-off">Turn OFF</button>
+            </div>
         </div>
     </div>
 
@@ -188,7 +197,8 @@
                     'li1_state': { value: '--', className: '' },
                     'temp_adc1_c_val': { value: '-- &deg;C' },
                     'adc0_val': { value: '-- mV' },
-                    'lo_state': { value: '--', className: '' },
+                    'out0_state': { value: '--', className: '' },
+                    'out1_state': { value: '--', className: '' },
                     'last_update': '--',
                     'mqtt_status': '--'
                 };
@@ -231,7 +241,8 @@
                         'li1_state': { value: data.li1_state, className: data.li1_class },
                         'temp_adc1_c_val': { value: `${data.temp_adc1_c_val} &deg;C` },
                         'adc0_val': { value: `${data.adc0_val} mV` },
-                        'lo_state': { value: data.lo_state, className: data.lo_class }
+                        'out0_state': { value: data.out0_state, className: data.out0_class },
+                        'out1_state': { value: data.out1_state, className: data.out1_class }
                     };
                     for (const id in fields) {
                         const field = fields[id];
@@ -257,8 +268,10 @@
             }
 
             // --- Event Listeners ---
-            document.getElementById('lo_on_btn').addEventListener('click', () => publishMqttCommand({lo: {bit: 0, value: 1}}));
-            document.getElementById('lo_off_btn').addEventListener('click', () => publishMqttCommand({lo: {bit: 0, value: 0}}));
+            document.getElementById('out0_on_btn').addEventListener('click', () => publishMqttCommand({lo: {bit: 0, value: 1}}));
+            document.getElementById('out0_off_btn').addEventListener('click', () => publishMqttCommand({lo: {bit: 0, value: 0}}));
+            document.getElementById('out1_on_btn').addEventListener('click', () => publishMqttCommand({lo: {bit: 1, value: 1}}));
+            document.getElementById('out1_off_btn').addEventListener('click', () => publishMqttCommand({lo: {bit: 1, value: 0}}));
             
             document.getElementById('addDeviceBtn').addEventListener('click', () => showDeviceModal());
             document.getElementById('editDeviceBtn').addEventListener('click', () => {
