@@ -13,6 +13,10 @@
         .label { color: #606770; }
         .value { font-weight: 600; color: #1c1e21; padding: 3px 8px; border-radius: 6px; transition: background-color 0.5s; }
         .btn-group { display: flex; justify-content: space-between; margin-top: 15px; }
+        .btn-group-single { display: flex; justify-content: center; margin-top: 15px; }
+        .btn-group-vertical { display: flex; flex-direction: column; }
+        .btn-group-vertical .btn { margin-bottom: 10px; }
+        .btn-group-vertical .btn:last-child { margin-bottom: 0; }
         .btn { flex-grow: 1; padding: 18px 10px; font-size: 1.2em; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; transition: background-color 0.2s; }
         .btn:first-child { margin-right: 10px; }
         .btn-on { background-color: #42b72a; color: white; }
@@ -20,6 +24,11 @@
         .btn-off { background-color: #fa3e3e; color: white; }
         .btn-off:hover { background-color: #e03030; }
         .status-on { color: #42b72a; }
+        .btn-action { background-color: #1877f2; color: white; }
+        .btn-action:hover { background-color: #166fe5; }
+        .btn:disabled { background-color: #e4e6eb; color: #bcc0c4; cursor: not-allowed; }
+        .btn:disabled:hover { background-color: #e4e6eb; }
+
         .status-off { color: #fa3e3e; }
         .status-high { color: #1877f2; }
         .status-low { color: #606770; }
@@ -97,8 +106,17 @@
         <p><span class="label">Last Update:</span> <span id="last_update" class="value">--</span></p>
         
         <h2>Device Status</h2>
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+            <span class="label" style="font-weight: bold;">Watering Mode:</span>
+            <select id="wateringModeSelect" style="font-size: 1em; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+                <option value="AUTO">AUTO</option>
+                <option value="MANUAL">MANUAL</option>
+                <option value="MAINTENANCE">MAINTENANCE</option>
+            </select>
+        </div>
         <p><span class="label">Device Time:</span> <span id="device_time" class="value">--</span></p>
         <p><span class="label">Uptime:</span> <span id="uptime" class="value">--</span></p>
+        <p><span class="label">Last Watering Time:</span> <span id="last_watering_time" class="value">--</span></p>
         <p><span class="label">Software Version:</span> <span id="soft_ver" class="value">--</span></p>
         <p><span class="label">App Status:</span> <span id="app_status" class="value">--</span></p>
         <p><span class="label">Error Code:</span> <span id="error_code" class="value">--</span></p>
@@ -109,19 +127,15 @@
         <p><span class="label">Temperature:</span> <span id="temp_adc1_c_val" class="value">-- &deg;C</span></p>
         <p><span class="label">Soil Moisture:</span> <span id="adc0_val" class="value">-- mV</span></p>
         
-        <h2>GPIO Output (GP2)</h2>
-        <div style="margin-bottom: 15px;">
+        <h2>Pump Control (OUT0)</h2>
+        <div class="pump-control-group">
             <p><span class="label">OUT0:</span> <span id="out0_state" class="value">--</span></p>
-            <div class="btn-group">
-                <button type="button" id="out0_on_btn" class="btn btn-on">Turn ON</button>
-                <button type="button" id="out0_off_btn" class="btn btn-off">Turn OFF</button>
+            <div class="btn-group-single" id="manual_water_btn_group">
+                <button type="button" id="manual_water_btn" class="btn btn-action">Run Manual Cycle</button>
             </div>
-        </div>
-        <div>
-            <p><span class="label">OUT1:</span> <span id="out1_state" class="value">--</span></p>
-            <div class="btn-group">
-                <button type="button" id="out1_on_btn" class="btn btn-on">Turn ON</button>
-                <button type="button" id="out1_off_btn" class="btn btn-off">Turn OFF</button>
+            <div class="btn-group" id="maintenance_pump_btn_group">
+                <button type="button" id="maintenance_pump_on_btn" class="btn btn-on">Force ON</button>
+                <button type="button" id="maintenance_pump_off_btn" class="btn btn-off">Force OFF</button>
             </div>
         </div>
     </div>
@@ -189,6 +203,7 @@
             function resetDisplay() {
                 const fieldsToReset = {
                     'uptime': '--',
+                    'last_watering_time': '--',
                     'soft_ver': '--',
                     'device_time': '--',
                     'app_status': '--',
@@ -197,6 +212,7 @@
                     'li1_state': { value: '--', className: '' },
                     'temp_adc1_c_val': { value: '-- &deg;C' },
                     'adc0_val': { value: '-- mV' },
+                    'watering_mode': 'MAINTENANCE',
                     'out0_state': { value: '--', className: '' },
                     'out1_state': { value: '--', className: '' },
                     'last_update': '--',
@@ -233,6 +249,7 @@
                     const data = JSON.parse(message.payloadString);
                     const fields = {
                         'uptime': data.uptime,
+                        'last_watering_time': data.last_watering_time,
                         'soft_ver': data.soft_ver,
                         'device_time': data.device_time,
                         'app_status': data.app_status,
@@ -241,6 +258,7 @@
                         'li1_state': { value: data.li1_state, className: data.li1_class },
                         'temp_adc1_c_val': { value: `${data.temp_adc1_c_val} &deg;C` },
                         'adc0_val': { value: `${data.adc0_val} mV` },
+                        'watering_mode': data.watering_mode,
                         'out0_state': { value: data.out0_state, className: data.out0_class },
                         'out1_state': { value: data.out1_state, className: data.out1_class }
                     };
@@ -251,6 +269,31 @@
                         } else {
                             updateUI(id, field);
                         }
+                    }
+
+                    // Update UI based on watering mode
+                    const mode = data.watering_mode || 'MAINTENANCE';
+                    document.getElementById('wateringModeSelect').value = mode;
+
+                    const manualGroup = document.getElementById('manual_water_btn_group');
+                    const maintenanceGroup = document.getElementById('maintenance_pump_btn_group');
+                    const manualBtn = document.getElementById('manual_water_btn');
+                    const maintOnBtn = document.getElementById('maintenance_pump_on_btn');
+                    const maintOffBtn = document.getElementById('maintenance_pump_off_btn');
+
+                    if (mode === 'MANUAL') {
+                        manualGroup.style.display = 'flex';
+                        maintenanceGroup.style.display = 'none';
+                        manualBtn.disabled = false;
+                    } else if (mode === 'MAINTENANCE') {
+                        manualGroup.style.display = 'none';
+                        maintenanceGroup.style.display = 'flex';
+                        maintOnBtn.disabled = false;
+                        maintOffBtn.disabled = false;
+                    } else { // AUTO or other
+                        manualGroup.style.display = 'flex'; // Show the button but disabled
+                        maintenanceGroup.style.display = 'none';
+                        manualBtn.disabled = true;
                     }
                 } catch (e) {
                     console.error("Error parsing MQTT message:", e);
@@ -268,10 +311,9 @@
             }
 
             // --- Event Listeners ---
-            document.getElementById('out0_on_btn').addEventListener('click', () => publishMqttCommand({lo: {bit: 0, value: 1}}));
-            document.getElementById('out0_off_btn').addEventListener('click', () => publishMqttCommand({lo: {bit: 0, value: 0}}));
-            document.getElementById('out1_on_btn').addEventListener('click', () => publishMqttCommand({lo: {bit: 1, value: 1}}));
-            document.getElementById('out1_off_btn').addEventListener('click', () => publishMqttCommand({lo: {bit: 1, value: 0}}));
+            document.getElementById('manual_water_btn').addEventListener('click', () => publishMqttCommand({lo: {bit: 0, value: 1}}));
+            document.getElementById('maintenance_pump_on_btn').addEventListener('click', () => publishMqttCommand({lo: {bit: 0, value: 1}}));
+            document.getElementById('maintenance_pump_off_btn').addEventListener('click', () => publishMqttCommand({lo: {bit: 0, value: 0}}));
             
             document.getElementById('addDeviceBtn').addEventListener('click', () => showDeviceModal());
             document.getElementById('editDeviceBtn').addEventListener('click', () => {
@@ -290,6 +332,11 @@
             document.getElementById('deviceSelect').addEventListener('change', handleDeviceChange);
             document.getElementById('cancelDeviceBtn').addEventListener('click', hideDeviceModal);
             document.getElementById('deviceForm').addEventListener('submit', handleSaveDevice);
+            document.getElementById('wateringModeSelect').addEventListener('change', (event) => {
+                if (confirm(`Change watering mode to ${event.target.value} and reboot the device?`)) {
+                    publishMqttCommand({ set_watering_mode: event.target.value });
+                }
+            });
             
             function connectToDevice(deviceConfig) {
                 if (!deviceConfig) return;
