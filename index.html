@@ -582,11 +582,20 @@
                 .then(function(subscription) {
                     console.log('User is subscribed:', subscription);
                     // ★★★ 送信先をAWS API Gatewayのエンドポイントに変更 ★★★
-                    const awsApiGatewayUrl = 'https://fasg4dmog5.execute-api.ap-northeast-1.amazonaws.com'; // ← ご自身のURLに書き換えてください
+                    const awsApiGatewayUrl = 'https://fasg4dmog5.execute-api.ap-northeast-1.amazonaws.com/'; // ← ご自身のURLに書き換えてください
+
+                    // ★★★ 現在選択中のdeviceIdを取得 ★★★
+                    const selectedDeviceId = document.getElementById('deviceSelect').value;
+                    if (!selectedDeviceId) {
+                        alert('通知を登録するデバイスが選択されていません。');
+                        throw new Error('No device selected for notification registration.');
+                    }
+
                     return fetch(awsApiGatewayUrl, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(subscription)
+                        // deviceIdとsubscriptionオブジェクトを両方送信する
+                        body: JSON.stringify({ deviceId: selectedDeviceId, subscription: subscription })
                     });
                 })
                 .then(response => {
