@@ -582,16 +582,25 @@
                 .then(function(subscription) {
                     console.log('User is subscribed:', subscription);
                     // ★★★ 送信先をAWS API Gatewayのエンドポイントに変更 ★★★
-                    const awsApiGatewayUrl = 'https://fasg4dmog5.execute-api.ap-southeast-2.amazonaws.com'; // ← ご自身のURLに書き換えてください
+                    const awsApiGatewayUrl = 'https://fasg4dmog5.execute-api.ap-northeast-1.amazonaws.com/prod/save-subscription'; // ← ご自身のURLに書き換えてください
                     return fetch(awsApiGatewayUrl, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(subscription)
                     });
                 })
-                .then(() => initializePushUI()) // UIを更新
+                .then(response => {
+                    // サーバーからの応答が成功(2xx)でなければエラーを投げる
+                    if (!response.ok) {
+                        throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
+                    }
+                    console.log('Subscription saved successfully on server.');
+                    // サーバーが成功を返した場合のみUIを更新する
+                    initializePushUI();
+                })
                 .catch(function(err) {
-                    console.log('Failed to subscribe the user: ', err);
+                    console.error('Failed to subscribe or save the subscription: ', err);
+                    alert('エラー通知の有効化に失敗しました。コンソールでエラーを確認してください。');
                 });
             }
 
