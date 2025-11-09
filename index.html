@@ -3,6 +3,7 @@
 <head>
     <title>Device Remote Control</title>
     <meta charset="UTF-8">
+    <link rel="manifest" href="./manifest.json">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
@@ -102,6 +103,12 @@
             <button id="deleteDeviceBtn" title="Delete selected device">🗑</button>
         </div>
 
+        <div id="push-notification-section" style="border-bottom: 1px solid #ddd; padding-bottom: 15px; margin-bottom: 15px;">
+            <h2>Notifications</h2>
+            <button type="button" id="pushSubscribeBtn" class="btn btn-action" style="width: 100%; display: none;">Enable Error Notifications</button>
+        </div>
+
+
         <p><span class="label">MQTT Status:</span> <span id="mqtt_status" class="value">--</span></p>
         <p><span class="label">Last Update:</span> <span id="last_update" class="value">--</span></p>
         
@@ -179,6 +186,7 @@
 
             let mqttClient = null;
             let stalenessTimer = null;
+            let serviceWorkerRegistration = null;
             // デフォルトの更新間隔60秒の1.5倍強に設定
             const STALE_DATA_TIMEOUT_MS = 95000; 
 
@@ -336,6 +344,11 @@
                 if (confirm(`Change watering mode to ${event.target.value} and reboot the device?`)) {
                     publishMqttCommand({ set_watering_mode: event.target.value });
                 }
+            });
+
+            // プッシュ通知購読ボタン
+            document.getElementById('pushSubscribeBtn').addEventListener('click', () => {
+                subscribeUserToPush();
             });
             
             function connectToDevice(deviceConfig) {
@@ -515,6 +528,85 @@
                 populateDeviceSelector(devices, lastSelectedId);
                 handleDeviceChange(); // Connect to the selected device
             }
+
+            // --- Push Notification Functions ---
+
+            function initializePushNotifications() {
+                if ('serviceWorker' in navigator && 'PushManager' in window) {
+                    console.log('Service Worker and Push is supported');
+                    navigator.serviceWorker.register('./sw.js')
+                        .then(function(swReg) {
+                            console.log('Service Worker is registered', swReg);
+                            serviceWorkerRegistration = swReg;
+                            initializePushUI();
+                        })
+                        .catch(function(error) {
+                            console.error('Service Worker Error', error);
+                        });
+                } else {
+                    console.warn('Push messaging is not supported');
+                    const pushButton = document.getElementById('pushSubscribeBtn');
+                    pushButton.textContent = 'Push Not Supported';
+                    pushButton.style.display = 'block';
+                    pushButton.disabled = true;
+                }
+            }
+
+            function initializePushUI() {
+                const pushButton = document.getElementById('pushSubscribeBtn');
+                pushButton.style.display = 'block';
+
+                serviceWorkerRegistration.pushManager.getSubscription()
+                    .then(function(subscription) {
+                        const isSubscribed = !(subscription === null);
+                        if (isSubscribed) {
+                            console.log('User IS subscribed.');
+                            pushButton.textContent = 'エラー通知は有効です';
+                            pushButton.disabled = true;
+                        } else {
+                            console.log('User is NOT subscribed.');
+                            pushButton.textContent = 'エラー通知を有効化';
+                            pushButton.disabled = false;
+                        }
+                    });
+            }
+
+            function subscribeUserToPush() {
+                const applicationServerKey = "BL1XYSPIcZtwwXetpPrTuOxxwy4EMaiE1eDkdi5y59h3R99nZ3hJmR27lcCKWyI8_2r7KRKdQd_SoFUVkeaQ2sg";
+                const applicationServerKeyDecoded = urlBase64ToUint8Array(applicationServerKey);
+
+                serviceWorkerRegistration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: applicationServerKeyDecoded
+                })
+                .then(function(subscription) {
+                    console.log('User is subscribed:', subscription);
+                    // ★★★ 送信先をAWS API Gatewayのエンドポイントに変更 ★★★
+                    const awsApiGatewayUrl = 'https://xxxxxxxxxx.execute-api.ap-northeast-1.amazonaws.com/prod/save-subscription'; // ← ご自身のURLに書き換えてください
+                    return fetch(awsApiGatewayUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(subscription)
+                    });
+                })
+                .then(() => initializePushUI()) // UIを更新
+                .catch(function(err) {
+                    console.log('Failed to subscribe the user: ', err);
+                });
+            }
+
+            function urlBase64ToUint8Array(base64String) {
+                const padding = '='.repeat((4 - base64String.length % 4) % 4);
+                const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+                const rawData = window.atob(base64);
+                const outputArray = new Uint8Array(rawData.length);
+                for (let i = 0; i < rawData.length; ++i) {
+                    outputArray[i] = rawData.charCodeAt(i);
+                }
+                return outputArray;
+            }
+
+            initializePushNotifications(); // プッシュ通知機能を初期化
         });
     </script>
 </body>
