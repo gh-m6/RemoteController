@@ -582,7 +582,7 @@
                 .then(function(subscription) {
                     console.log('User is subscribed:', subscription);
                     // ★★★ 送信先をAWS API Gatewayのエンドポイントに変更 ★★★
-                    const awsApiGatewayUrl = 'https://fasg4dmog5.execute-api.ap-northeast-1.amazonaws.com/prod/save-subscription'; // ← ご自身のURLに書き換えてください
+                    const awsApiGatewayUrl = 'https://fasg4dmog5.execute-api.ap-northeast-1.amazonaws.com'; // ← ご自身のURLに書き換えてください
                     return fetch(awsApiGatewayUrl, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
