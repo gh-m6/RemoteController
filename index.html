@@ -101,7 +101,7 @@
             <button id="addDeviceBtn" title="Add new device">+</button>
             <button id="editDeviceBtn" title="Edit selected device">✎</button>
             <button id="deleteDeviceBtn" title="Delete selected device">🗑</button>
-            <button type="button" id="pushSubscribeBtn" class="btn btn-action" title="Enable error notifications for the selected device" style="margin-left: 8px; padding: 0 12px; font-size: 1.2em; display: none;">🔔</button>
+            <button type="button" id="pushSubscribeBtn" class="btn btn-action" style="margin-left: 8px; padding: 0 12px; font-size: 1.2em; display: none;"></button>
         </div>
 
 
@@ -183,6 +183,7 @@
             let mqttClient = null;
             let stalenessTimer = null;
             let serviceWorkerRegistration = null;
+            let isSubscribed = false;
             // デフォルトの更新間隔60秒の1.5倍強に設定
             const STALE_DATA_TIMEOUT_MS = 95000; 
 
@@ -342,11 +343,6 @@
                 }
             });
 
-            // プッシュ通知購読ボタン
-            document.getElementById('pushSubscribeBtn').addEventListener('click', () => {
-                subscribeUserToPush();
-            });
-            
             function connectToDevice(deviceConfig) {
                 if (!deviceConfig) return;
 
@@ -512,6 +508,11 @@
                 const devices = loadDevices();
                 const selectedDevice = devices.find(d => d.deviceId === selectedId);
                 connectToDevice(selectedDevice);
+
+                // デバイスが切り替わったら、プッシュ通知の購読状態を再評価し、ボタンUIを更新
+                if (serviceWorkerRegistration) {
+                    initializePushUI();
+                }
             }
 
             // --- Initial Execution ---
@@ -549,21 +550,100 @@
             }
 
             function initializePushUI() {
-                const pushButton = document.getElementById('pushSubscribeBtn');
-                const selectedDeviceId = document.getElementById('deviceSelect').value;
-                pushButton.style.display = 'block';
+                const pushButton = document.getElementById('pushSubscribeBtn');                
+                pushButton.style.display = 'block'; // ボタンを表示状態にする
+
+                // ボタンにクリックイベントリスナーがなければ設定する
+                if (!pushButton.hasAttribute('data-listener-attached')) {
+                    pushButton.addEventListener('click', function() {
+                        pushButton.disabled = true; // 処理中に連打されるのを防ぐ
+                        if (isSubscribed) {
+                            unsubscribeUserFromPush();
+                        } else {
+                            subscribeUserToPush();
+                        }
+                    });
+                    pushButton.setAttribute('data-listener-attached', 'true');
+                }
 
                 serviceWorkerRegistration.pushManager.getSubscription()
                     .then(function(subscription) {
-                        const isSubscribed = !(subscription === null);
-                        if (isSubscribed && selectedDeviceId) {
-                            console.log('User IS subscribed.');
-                            pushButton.textContent = 'エラー通知は有効です';
-                            pushButton.disabled = true;
+                        isSubscribed = !(subscription === null);
+                        pushButton.disabled = false; // 状態チェックが終わったら操作可能に
+                        updatePushButtonUI();
+                    });
+            }
+
+            function updatePushButtonUI() {
+                const pushButton = document.getElementById('pushSubscribeBtn');
+                if (!pushButton) return;
+
+                const selectedDeviceId = document.getElementById('deviceSelect').value;
+
+                if (isSubscribed) {
+                    pushButton.textContent = '通知OFF 🔕';
+                    pushButton.title = 'Disable error notifications for the selected device';
+                } else {
+                    pushButton.textContent = '通知ON 🔔';
+                    pushButton.title = 'Enable error notifications for the selected device';
+                }
+            }
+
+            function unsubscribeUserFromPush() {
+                serviceWorkerRegistration.pushManager.getSubscription()
+                    .then(function(subscription) {
+                        if (subscription) {
+                            const selectedDeviceId = document.getElementById('deviceSelect').value;
+                            if (!selectedDeviceId) {
+                                alert('通知を無効にするデバイスが選択されていません。');
+                                document.getElementById('pushSubscribeBtn').disabled = false; // ボタンを再度有効化
+                                throw new Error('No device selected for unsubscription.');
+                            }
+
+                            // ★★★ バックエンドに購読解除を通知するエンドポイント ★★★
+                            // このエンドポイントはLambda側で別途実装が必要です。
+                            const awsApiGatewayUnregisterUrl = 'https://fasg4dmog5.execute-api.ap-southeast-2.amazonaws.com/unregister-subscription';
+
+                            // サーバーに購読解除を通知
+                            fetch(awsApiGatewayUnregisterUrl, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    deviceId: selectedDeviceId,
+                                    endpoint: subscription.endpoint // どの購読を解除するかを特定するためにendpointを送信
+                                })
+                            })
+                            .then(response => {
+                                if (!response.ok) {
+                                    // サーバー側で失敗しても、ブラウザ側の購読解除は試みる
+                                    console.error(`Server responded with ${response.status} on unregister.`);
+                                }
+                                console.log('Successfully unregistered on server.');
+                                // サーバー側の処理成否に関わらず、ブラウザの購読を解除
+                                return subscription.unsubscribe();
+                            })
+                            .then(function(successful) {
+                                if (successful) {
+                                    console.log('Successfully unsubscribed from push notifications (browser-side).');
+                                    isSubscribed = false;
+                                } else {
+                                    console.error('Failed to unsubscribe (browser-side).');
+                                    isSubscribed = true; // 失敗したので状態は購読中のまま
+                                }
+                            })
+                            .catch(function(e) {
+                                console.error('Error during unsubscription process: ', e);
+                                isSubscribed = true; // 失敗したので状態は購読中のまま
+                            })
+                            .finally(function() {
+                                document.getElementById('pushSubscribeBtn').disabled = false; // 処理完了後にボタンを有効化
+                                updatePushButtonUI(); // 最終的な状態でUIを更新
+                            });
                         } else {
-                            console.log('User is NOT subscribed.');
-                            pushButton.textContent = 'エラー通知を有効化';
-                            pushButton.disabled = false;
+                            // 購読情報がなければ何もしない
+                            document.getElementById('pushSubscribeBtn').disabled = false; // ボタンを有効化
+                            isSubscribed = false;
+                            updatePushButtonUI();
                         }
                     });
             }
@@ -578,13 +658,14 @@
                 })
                 .then(function(subscription) {
                     console.log('User is subscribed:', subscription);
-                    // ★★★ 送信先をAWS API Gatewayのエンドポイントに変更 ★★★
-                    const awsApiGatewayUrl = 'https://fasg4dmog5.execute-api.ap-southeast-2.amazonaws.com/register-subscription'; // ← ご自身のAPI GatewayのIDとリージョンに書き換えてください
+                    const awsApiGatewayUrl = 'https://fasg4dmog5.execute-api.ap-southeast-2.amazonaws.com/register-subscription';
 
-                    // ★★★ 現在選択中のdeviceIdを取得 ★★★
                     const selectedDeviceId = document.getElementById('deviceSelect').value;
                     if (!selectedDeviceId) {
                         alert('通知を登録するデバイスが選択されていません。');
+                        document.getElementById('pushSubscribeBtn').disabled = false; // ボタンを再度有効化
+                        // デバイスIDがない場合はブラウザ側も購読解除
+                        subscription.unsubscribe();
                         throw new Error('No device selected for notification registration.');
                     }
 
@@ -601,12 +682,17 @@
                         throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
                     }
                     console.log('Subscription saved successfully on server.');
-                    // サーバーが成功を返した場合のみUIを更新する
-                    initializePushUI();
+                    isSubscribed = true; // サーバー登録成功時に状態を更新
                 })
                 .catch(function(err) {
                     console.error('Failed to subscribe or save the subscription: ', err);
                     alert('エラー通知の有効化に失敗しました。コンソールでエラーを確認してください。');
+                    isSubscribed = false; // 失敗したので状態をリセット
+                })
+                .finally(function() {
+                    // 成功・失敗に関わらずUIを最終状態に更新
+                    document.getElementById('pushSubscribeBtn').disabled = false; // 処理完了後にボタンを有効化
+                    updatePushButtonUI();
                 });
             }
 
