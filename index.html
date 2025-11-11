@@ -33,6 +33,14 @@
         .btn-push-off:hover:not(:disabled) { background-color: #f0f2f5; }
         .btn-push-on { background-color: #1877f2; color: white; border: 2px solid #1877f2; }
         .btn-push-on:hover:not(:disabled) { background-color: #166fe5; }
+        /* プッシュ通知ボタンのサイズ調整 */
+        .btn-push { font-size: 0.9em; padding: 0 10px; margin-left: 8px; white-space: nowrap; }
+        /* プッシュ通知が利用できない場合のテキストスタイル */
+        .push-status-text {
+            font-size: 0.9em;
+            color: #606770; /* やや薄い文字色 */
+            margin-left: 8px;
+        }
 
         .btn:disabled:hover { background-color: #e4e6eb; }
 
@@ -107,7 +115,8 @@
             <button id="addDeviceBtn" title="Add new device">+</button>
             <button id="editDeviceBtn" title="Edit selected device">✎</button>
             <button id="deleteDeviceBtn" title="Delete selected device">🗑</button>
-            <button type="button" id="pushSubscribeBtn" class="btn btn-action" style="margin-left: 8px; padding: 0 12px; font-size: 1.2em; display: none;"></button>
+            <button type="button" id="pushSubscribeBtn" class="btn btn-push" style="display: none;"></button> <!-- 重複を削除し、初期状態は非表示に -->
+            <span id="push-status-message" class="push-status-text" style="display: none;"></span>
         </div>
 
 
@@ -544,14 +553,20 @@
                             initializePushUI();
                         })
                         .catch(function(error) {
-                            console.error('Service Worker Error', error);
+                            console.error('Service Worker registration failed:', error);
+                            const pushStatusMessage = document.getElementById('push-status-message');
+                            document.getElementById('pushSubscribeBtn').style.display = 'none'; // ボタンは隠す
+                            pushStatusMessage.textContent = 'プッシュ通知は利用できません';
+                            pushStatusMessage.title = 'Push notifications require a secure connection (HTTPS) and are not available on local files.';
+                            pushStatusMessage.style.display = 'inline'; // メッセージを表示
                         });
                 } else {
                     console.warn('Push messaging is not supported');
-                    const pushButton = document.getElementById('pushSubscribeBtn');
-                    pushButton.textContent = 'Push Not Supported';
-                    pushButton.style.display = 'block';
-                    pushButton.disabled = true;
+                    const pushStatusMessage = document.getElementById('push-status-message');
+                    document.getElementById('pushSubscribeBtn').style.display = 'none'; // ボタンは隠す
+                    pushStatusMessage.textContent = 'プッシュ通知非対応ブラウザ';
+                    pushStatusMessage.title = 'Your browser does not support push notifications.';
+                    pushStatusMessage.style.display = 'inline'; // メッセージを表示
                 }
             }
 
@@ -587,12 +602,12 @@
                 const selectedDeviceId = document.getElementById('deviceSelect').value;
 
                 if (isSubscribed) {
-                    pushButton.textContent = '通知 OFF';
+                    pushButton.textContent = '通知を無効にする';
                     pushButton.title = 'Disable error notifications for the selected device';
                     pushButton.classList.remove('btn-push-off');
                     pushButton.classList.add('btn-push-on');
                 } else {
-                    pushButton.textContent = '通知 ON';
+                    pushButton.textContent = '通知を有効にする';
                     pushButton.title = 'Enable error notifications for the selected device';
                     pushButton.classList.remove('btn-push-on');
                     pushButton.classList.add('btn-push-off');
