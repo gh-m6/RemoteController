@@ -51,8 +51,9 @@
 
         .device-selector { display: flex; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #ddd; padding-bottom: 20px; }
         #deviceSelect { flex-grow: 1; font-size: 1.1em; padding: 10px; border-radius: 6px; border: 1px solid #ccc; }
-        .device-selector button { font-size: 1.5em; width: 40px; height: 40px; margin-left: 8px; border: none; background-color: #e4e6eb; border-radius: 50%; cursor: pointer; }
-        .device-selector button:hover { background-color: #d8dbdf; }
+        /* デバイス操作ボタン（+, ✎, 🗑）のスタイル */
+        .btn-device-action { font-size: 1.5em; width: 40px; height: 40px; margin-left: 8px; border: none; background-color: #e4e6eb; border-radius: 8px; /* 丸を角丸に変更 */ cursor: pointer; flex-shrink: 0; }
+        .btn-device-action:hover { background-color: #d8dbdf; }
 
         /* Modal Styles */
         .modal {
@@ -112,9 +113,9 @@
 
         <div class="device-selector">
             <select id="deviceSelect"></select>
-            <button id="addDeviceBtn" title="Add new device">+</button>
-            <button id="editDeviceBtn" title="Edit selected device">✎</button>
-            <button id="deleteDeviceBtn" title="Delete selected device">🗑</button>
+            <button id="addDeviceBtn" class="btn-device-action" title="Add new device">+</button>
+            <button id="editDeviceBtn" class="btn-device-action" title="Edit selected device">✎</button>
+            <button id="deleteDeviceBtn" class="btn-device-action" title="Delete selected device">🗑</button>
             <button type="button" id="pushSubscribeBtn" class="btn btn-push" style="display: none;"></button> <!-- 重複を削除し、初期状態は非表示に -->
             <span id="push-status-message" class="push-status-text" style="display: none;"></span>
         </div>
