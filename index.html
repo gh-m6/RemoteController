@@ -555,19 +555,21 @@
                         })
                         .catch(function(error) {
                             console.error('Service Worker registration failed:', error);
-                            const pushStatusMessage = document.getElementById('push-status-message');
-                            document.getElementById('pushSubscribeBtn').style.display = 'none'; // ボタンは隠す
-                            pushStatusMessage.textContent = 'プッシュ通知は利用できません';
-                            pushStatusMessage.title = 'Push notifications require a secure connection (HTTPS) and are not available on local files.';
-                            pushStatusMessage.style.display = 'inline'; // メッセージを表示
+                            const pushButton = document.getElementById('pushSubscribeBtn');
+                            document.getElementById('push-status-message').style.display = 'none'; // テキストは隠す
+                            pushButton.textContent = 'プッシュ通知は利用できません';
+                            pushButton.title = 'Push notifications require a secure connection (HTTPS) and are not available on local files.';
+                            pushButton.style.display = 'block'; // ボタンを表示
+                            pushButton.disabled = true; // ボタンを押せなくする
                         });
                 } else {
                     console.warn('Push messaging is not supported');
-                    const pushStatusMessage = document.getElementById('push-status-message');
-                    document.getElementById('pushSubscribeBtn').style.display = 'none'; // ボタンは隠す
-                    pushStatusMessage.textContent = 'プッシュ通知非対応ブラウザ';
-                    pushStatusMessage.title = 'Your browser does not support push notifications.';
-                    pushStatusMessage.style.display = 'inline'; // メッセージを表示
+                    const pushButton = document.getElementById('pushSubscribeBtn');
+                    document.getElementById('push-status-message').style.display = 'none'; // テキストは隠す
+                    pushButton.textContent = 'プッシュ通知非対応ブラウザ';
+                    pushButton.title = 'Your browser does not support push notifications.';
+                    pushButton.style.display = 'block'; // ボタンを表示
+                    pushButton.disabled = true; // ボタンを押せなくする
                 }
             }
 
