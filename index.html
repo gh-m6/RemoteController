@@ -33,8 +33,8 @@
         .btn-push-off:hover:not(:disabled) { background-color: #f0f2f5; }
         .btn-push-on { background-color: #1877f2; color: white; border: 2px solid #1877f2; }
         .btn-push-on:hover:not(:disabled) { background-color: #166fe5; }
-        /* プッシュ通知ボタンのサイズ調整 */
-        .btn-push { font-size: 0.9em; padding: 0 10px; margin-left: 8px; white-space: nowrap; }
+        /* プッシュ通知ボタンのサイズ調整と二行表示対応 */
+        .btn-push { font-size: 0.9em; padding: 5px 10px; margin-left: 8px; text-align: center; line-height: 1.2; }
         /* プッシュ通知が利用できない場合のテキストスタイル */
         .push-status-text {
             font-size: 0.9em;
@@ -603,12 +603,12 @@
                 const selectedDeviceId = document.getElementById('deviceSelect').value;
 
                 if (isSubscribed) {
-                    pushButton.textContent = '通知を無効にする';
+                    pushButton.innerHTML = '通知を<br>無効にする';
                     pushButton.title = 'Disable error notifications for the selected device';
                     pushButton.classList.remove('btn-push-off');
                     pushButton.classList.add('btn-push-on');
                 } else {
-                    pushButton.textContent = '通知を有効にする';
+                    pushButton.innerHTML = '通知を<br>有効にする';
                     pushButton.title = 'Enable error notifications for the selected device';
                     pushButton.classList.remove('btn-push-on');
                     pushButton.classList.add('btn-push-off');
