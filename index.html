@@ -28,6 +28,12 @@
         .btn-action { background-color: #1877f2; color: white; }
         .btn-action:hover { background-color: #166fe5; }
         .btn:disabled { background-color: #e4e6eb; color: #bcc0c4; cursor: not-allowed; }
+        /* モダンなプッシュ通知ボタンスタイル */
+        .btn-push-off { background-color: #fff; color: #1877f2; border: 2px solid #1877f2; }
+        .btn-push-off:hover:not(:disabled) { background-color: #f0f2f5; }
+        .btn-push-on { background-color: #1877f2; color: white; border: 2px solid #1877f2; }
+        .btn-push-on:hover:not(:disabled) { background-color: #166fe5; }
+
         .btn:disabled:hover { background-color: #e4e6eb; }
 
         .status-off { color: #fa3e3e; }
@@ -581,11 +587,15 @@
                 const selectedDeviceId = document.getElementById('deviceSelect').value;
 
                 if (isSubscribed) {
-                    pushButton.textContent = '通知OFF 🔕';
+                    pushButton.textContent = '通知 OFF';
                     pushButton.title = 'Disable error notifications for the selected device';
+                    pushButton.classList.remove('btn-push-off');
+                    pushButton.classList.add('btn-push-on');
                 } else {
-                    pushButton.textContent = '通知ON 🔔';
+                    pushButton.textContent = '通知 ON';
                     pushButton.title = 'Enable error notifications for the selected device';
+                    pushButton.classList.remove('btn-push-on');
+                    pushButton.classList.add('btn-push-off');
                 }
             }
 
