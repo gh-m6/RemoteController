@@ -696,12 +696,20 @@
                         subscription.unsubscribe();
                         throw new Error('No device selected for notification registration.');
                     }
+                    const selectedDeviceName = document.getElementById('deviceSelect').options[document.getElementById('deviceSelect').selectedIndex].text;
+                    if (!selectedDeviceName) {
+                        alert('選択されたデバイスのニックネームが取得できませんでした。');
+                        document.getElementById('pushSubscribeBtn').disabled = false; // ボタンを再度有効化
+                        // デバイスIDがない場合はブラウザ側も購読解除
+                        subscription.unsubscribe();
+                        throw new Error('No device selected for notification registration.');
+                    }
 
                     return fetch(awsApiGatewayUrl, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        // deviceIdとsubscriptionオブジェクトを両方送信する
-                        body: JSON.stringify({ deviceId: selectedDeviceId, subscription: subscription })
+                        // deviceId, nickname, subscriptionオブジェクトを送信する
+                        body: JSON.stringify({ deviceId: selectedDeviceId, nickname: selectedDeviceName, subscription: subscription })
                     });
                 })
                 .then(response => {
