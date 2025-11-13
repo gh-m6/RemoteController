@@ -135,6 +135,7 @@
         .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
         .device-card { background: #fff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); overflow: hidden; transition: transform 0.2s; }
         .device-card:hover { transform: translateY(-5px); }
+        .device-card.active { border: 2px solid #1877f2; } /* アクティブなカードの強調表示 */
         .card-header { color: white; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; }
         .card-header h3 { margin: 0; font-size: 1.2em; }
         .card-status-icon { font-size: 1.5em; }
@@ -150,6 +151,55 @@
         .status-error { background-color: #fa3e3e; } /* Red */
         .status-warning { background-color: #f5a623; } /* Orange */
         .status-offline { background-color: #90949c; } /* Gray */
+        .device-details-modal-content {
+            background-color: #fff;
+            padding: 20px 30px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px; /* 詳細モーダルの幅を広げる */
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            max-height: 90vh; /* 高さを制限しスクロール可能に */
+            overflow-y: auto;
+        }
+        .device-details-modal-content h2 { margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .device-details-modal-content h3 { font-size: 1.1em; color: #606770; margin-top: 20px; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
+        .device-details-modal-content p { margin: 8px 0; }
+        .device-details-modal-content .label { font-size: 0.9em; }
+        .device-details-modal-content .value { font-size: 1em; }
+        .device-details-modal-content input[type="number"] { width: 80px; padding: 5px; border-radius: 4px; border: 1px solid #ccc; }
+        .device-details-modal-content .btn-group { margin-top: 15px; }
+        .device-details-modal-content .modal-buttons { margin-top: 25px; text-align: right; }
+        /* --- Watering Settings Form Style --- */
+        /* フォームを削除したため、関連スタイルも削除 */
+
+        /* --- Modern Mode Selector --- */
+        .mode-selector {
+            display: flex;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #ccc;
+            margin-top: 10px;
+        }
+        .mode-btn {
+            flex-grow: 1;
+            padding: 8px 5px;
+            font-size: 0.8em;
+            font-weight: 600;
+            border: none;
+            background-color: #f0f2f5;
+            color: #606770;
+            cursor: pointer;
+            transition: background-color 0.2s, color 0.2s;
+            white-space: nowrap; /* ボタン内のテキストが折り返さないように */
+            border-right: 1px solid #ccc;
+        }
+        .mode-btn:last-child { border-right: none; }
+        .mode-btn.active {
+            background-color: #1877f2;
+            color: white;
+        }
+        .mode-btn:not(.active):hover { background-color: #e4e6eb; }
+
         .hidden { display: none; }
     </style>
     <!-- Paho MQTT Client Library from CDN -->
@@ -171,6 +221,42 @@
             <!-- Device cards will be inserted here by JavaScript -->
         </div>
 
+    </div>
+
+    <!-- Device Details Modal -->
+    <div id="deviceDetailsModal" class="modal">
+        <div class="device-details-modal-content">
+            <h2 id="detailsModalTitle">Device Details</h2>
+
+            <h3>General Status</h3>
+            <p><span class="label">Uptime:</span> <span id="details_uptime" class="value">--</span></p>
+            <p><span class="label">Device Time:</span> <span id="details_device_time" class="value">--</span></p>
+            <p><span class="label">Last Watering Time:</span> <span id="details_last_watering_time" class="value">--</span></p>
+            <p><span class="label">Software Version:</span> <span id="details_soft_ver" class="value">--</span></p>
+            <p><span class="label">App Status:</span> <span id="details_app_status" class="value">--</span></p>
+            <p><span class="label">Error Code:</span> <span id="details_error_code" class="value">--</span></p>
+
+            <h3>Sensors</h3>
+            <p><span class="label">IN0:</span> <span id="details_li0_state" class="value">--</span></p>
+            <p><span class="label">IN1:</span> <span id="details_li1_state" class="value">--</span></p>
+            <p><span class="label">Temperature:</span> <span id="details_temp_adc1_c_val" class="value">-- &deg;C</span></p>
+            <p><span class="label">Soil Moisture:</span> <span id="details_adc0_val" class="value">-- mV</span></p>
+
+            <h3>Watering Settings</h3>
+            <p><span class="label">Current Mode:</span> <span id="details_watering_mode" class="value">--</span></p>
+            <!-- 水やり設定の編集フォームを削除 -->
+
+            <h3>Pump Control (Maintenance Mode)</h3>
+            <p><span class="label">OUT0 State:</span> <span id="details_out0_state" class="value">--</span></p>
+            <div class="btn-group">
+                <button type="button" id="details_maintenance_pump_on_btn" class="btn btn-on">Force ON</button>
+                <button type="button" id="details_maintenance_pump_off_btn" class="btn btn-off">Force OFF</button>
+            </div>
+
+            <div class="modal-buttons">
+                <button type="button" id="cancelDetailsBtn" class="btn">Close</button>
+            </div>
+        </div>
     </div>
 
     <div id="deviceModal" class="modal">
@@ -254,6 +340,17 @@
                     card.querySelector('.error-code').textContent = data.error_code || 'NO_ERROR';
 
                     // --- 2. Update color coding and status ---
+                    // Watering Mode UIの更新
+                    updateModeSelectorUI(deviceId, data.watering_mode);
+
+                    // --- Update button states based on mode ---
+                    const manualWaterBtn = card.querySelector('.btn-manual-water');
+                    if (manualWaterBtn) {
+                        // Enable "Water Now" button only if mode is MANUAL
+                        manualWaterBtn.disabled = (data.watering_mode !== 'MANUAL');
+                    }
+
+
                     const header = card.querySelector('.card-header');
                     const statusIcon = card.querySelector('.card-status-icon');
                     header.classList.remove('status-ok', 'status-error', 'status-warning', 'status-offline');
@@ -285,6 +382,41 @@
                             document.getElementById(`card-${deviceId}`).dataset.status = 'offline';
                         }
                     }, STALE_DATA_TIMEOUT_MS);
+
+                    // --- 4. Update Device Details Modal if open ---
+                    const detailsModal = document.getElementById('deviceDetailsModal');
+                    if (detailsModal.style.display === 'flex' && detailsModal.dataset.deviceId === deviceId) {
+                        document.getElementById('details_uptime').textContent = data.uptime || '--';
+                        document.getElementById('details_device_time').textContent = data.device_time || '--';
+                        document.getElementById('details_last_watering_time').textContent = data.last_watering_time || '--';
+                        document.getElementById('details_soft_ver').textContent = data.soft_ver || '--';
+                        document.getElementById('details_app_status').textContent = data.app_status || '--';
+                        document.getElementById('details_error_code').textContent = data.error_code || 'NO_ERROR';
+                        document.getElementById('details_li0_state').textContent = data.li0_state || '--';
+                        document.getElementById('details_li1_state').textContent = data.li1_state || '--';
+                        document.getElementById('details_temp_adc1_c_val').textContent = `${data.temp_adc1_c_val || '--'} °C`;
+                        document.getElementById('details_adc0_val').textContent = `${data.adc0_val || '--'} mV`;
+
+                        // 水やり設定の表示
+                        document.getElementById('details_watering_mode').textContent = data.watering_mode || 'MAINTENANCE';
+
+                        // ポンプ制御ボタンの有効/無効
+                        const pumpOnBtn = document.getElementById('details_maintenance_pump_on_btn');
+                        const pumpOffBtn = document.getElementById('details_maintenance_pump_off_btn');
+                        if (data.watering_mode === 'MAINTENANCE') {
+                            pumpOnBtn.disabled = false;
+                            pumpOffBtn.disabled = false;
+                        } else {
+                            pumpOnBtn.disabled = true;
+                            pumpOffBtn.disabled = true;
+                        }
+                        // OUT0の状態も表示
+                        const out0State = document.getElementById('details_out0_state');
+                        if (out0State) {
+                            out0State.textContent = data.out0_state || '--';
+                            out0State.className = `value ${data.out0_class || ''}`;
+                        }
+                    }
 
                 } catch (e) {
                     console.error("Error parsing MQTT message:", e);
@@ -323,9 +455,11 @@
                     <div class="card-actions">
                         <button class="btn btn-action btn-manual-water">Water Now</button>
                         <button class="btn btn-device-action btn-edit-device" title="Edit">✎</button>
+                        <button class="btn btn-device-action btn-details-device" title="Details">...</button>
                         <button class="btn btn-device-action btn-delete-device" title="Delete">🗑</button>
                         <button class="btn btn-push btn-push-off" data-push-state="off">Enable Notifications</button>
                     </div>
+                    <div class="mode-selector"></div>
                 `;
 
                 card.querySelector('.btn-manual-water').addEventListener('click', (e) => {
@@ -344,6 +478,25 @@
                     e.stopPropagation();
                     togglePushNotifications(device.deviceId);
                 });
+                card.querySelector('.btn-details-device').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    showDeviceDetailsModal(device);
+                });
+
+                // --- Create Mode Selector Buttons ---
+                const modeSelector = card.querySelector('.mode-selector');
+                const modes = ['AUTO', 'MANUAL', 'MAINTENANCE'];
+                modes.forEach(mode => {
+                    const button = document.createElement('button');
+                    button.className = 'mode-btn';
+                    button.dataset.mode = mode;
+                    button.textContent = mode;
+                    if (mode === 'MAINTENANCE') { // Default active state
+                        button.classList.add('active');
+                    }
+                    button.addEventListener('click', () => setWateringMode(device.deviceId, mode));
+                    modeSelector.appendChild(button);
+                });
 
                 return card;
             }
@@ -356,13 +509,41 @@
                     const card = createDeviceCard(device);
                     dashboard.appendChild(card);
                 });
+
                 // プッシュ通知UIを初期化
                 initializePushUI();
+            }
+            
+            let currentDetailsDeviceId = null;
+            
+            function updateModeSelectorUI(deviceId, activeMode) {
+                const card = document.getElementById(`card-${deviceId}`);
+                if (!card || !activeMode) return;
+                card.querySelectorAll('.mode-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                    if (btn.dataset.mode === activeMode) {
+                        // Update the "Water Now" button's state based on the new mode
+                        const manualWaterBtn = card.querySelector('.btn-manual-water');
+                        if (manualWaterBtn) {
+                            manualWaterBtn.disabled = (activeMode !== 'MANUAL');
+                        }
+                        btn.classList.add('active');
+                    }
+                });
             }
 
             // --- Event Listeners ---
             document.getElementById('addDeviceBtn').addEventListener('click', () => showDeviceModal());
             document.getElementById('cancelDeviceBtn').addEventListener('click', hideDeviceModal);
+
+            function setWateringMode(deviceId, mode) {
+                 if (confirm(`Change watering mode to ${mode} and reboot the device?`)) {
+                    publishMqttCommand(deviceId, { set_watering_mode: mode });
+                    // Optimistic UI update
+                    updateModeSelectorUI(deviceId, mode);
+                }
+            }
+
             document.getElementById('deviceForm').addEventListener('submit', handleSaveDevice);
 
             document.getElementById('searchInput').addEventListener('input', (e) => {
@@ -558,6 +739,50 @@
                 mqttClient.connect(connectOptions);
             }
 
+            // --- Device Details Modal Functions ---
+            function showDeviceDetailsModal(device) {
+                currentDetailsDeviceId = device.deviceId; // 現在開いている詳細モーダルのデバイスIDを記録
+                const modal = document.getElementById('deviceDetailsModal');
+                modal.dataset.deviceId = device.deviceId; // モーダルにデバイスIDを紐付け
+                document.getElementById('detailsModalTitle').textContent = `${device.name} Details`;
+
+                // 初期表示は空にするか、最新のデータで埋める
+                document.getElementById('details_uptime').textContent = '--';
+                document.getElementById('details_device_time').textContent = '--';
+                document.getElementById('details_last_watering_time').textContent = '--';
+                document.getElementById('details_soft_ver').textContent = '--';
+                document.getElementById('details_app_status').textContent = '--';
+                document.getElementById('details_error_code').textContent = '--';
+                document.getElementById('details_li0_state').textContent = '--';
+                document.getElementById('details_li1_state').textContent = '--';
+                document.getElementById('details_temp_adc1_c_val').textContent = '-- °C';
+                document.getElementById('details_adc0_val').textContent = '-- mV';
+                document.getElementById('details_watering_mode').textContent = '--';
+                document.getElementById('details_out0_state').textContent = '--';
+
+                // ポンプ制御ボタンを初期状態で無効化
+                document.getElementById('details_maintenance_pump_on_btn').disabled = true;
+                document.getElementById('details_maintenance_pump_off_btn').disabled = true;
+
+                modal.style.display = 'flex';
+            }
+
+            function hideDeviceDetailsModal() {
+                document.getElementById('deviceDetailsModal').style.display = 'none';
+                currentDetailsDeviceId = null; // モーダルが閉じたらIDをクリア
+            }
+
+            // --- Pump Control in Details Modal ---
+            document.getElementById('details_maintenance_pump_on_btn').addEventListener('click', () => {
+                const deviceId = document.getElementById('deviceDetailsModal').dataset.deviceId;
+                if (deviceId) publishMqttCommand(deviceId, { lo: { bit: 0, value: 1 } });
+            });
+            document.getElementById('details_maintenance_pump_off_btn').addEventListener('click', () => {
+                const deviceId = document.getElementById('deviceDetailsModal').dataset.deviceId;
+                if (deviceId) publishMqttCommand(deviceId, { lo: { bit: 0, value: 0 } });
+            });
+            document.getElementById('cancelDetailsBtn').addEventListener('click', hideDeviceDetailsModal);
+
             // --- Device Management ---
             function loadDevices() {
                 const saved = localStorage.getItem('deviceRemoteDevices');
@@ -583,7 +808,7 @@
                     document.getElementById('deviceName').value = device.name;
                     deviceIdInput.value = device.deviceId;
                     deviceIdInput.readOnly = true;
-                    document.getElementById('devicePassword').placeholder = 'Leave blank to keep current';
+                    document.getElementById('devicePassword').placeholder = 'Leave blank to keep current password when editing.';
                     document.getElementById('devicePassword').value = '';
                     document.getElementById('deviceBroker').value = device.broker;
                     document.getElementById('deviceWsPort').value = device.ws_port;
