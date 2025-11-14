@@ -371,13 +371,10 @@
                     
                     let statusClass = 'status-ok';
                     let icon = '✓';
-                    // data.error_codeが '0' や 0 ではないこと、かつ 'NO_ERROR' という文字列でもないことを確認
-                    const hasError = data.error_code && data.error_code != 0 && data.error_code !== 'NO_ERROR';
-
-                    if (hasError) {
+                    if (data.error_code !== '0 (No error)') {
                         statusClass = 'status-error';
                         icon = '✗';
-                    } else if (data.adc0_val < 1000) { // Example warning threshold
+                    } else if (data.adc0_val > 900) { // 仮の警告閾値
                         statusClass = 'status-warning';
                         icon = '!';
                     }
