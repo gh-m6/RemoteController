@@ -231,7 +231,6 @@
             <h3>General Status</h3>
             <p><span class="label">Uptime:</span> <span id="details_uptime" class="value">--</span></p>
             <p><span class="label">Device Time:</span> <span id="details_device_time" class="value">--</span></p>
-            <p><span class="label">Last Watering Time:</span> <span id="details_last_watering_time" class="value">--</span></p>
             <p><span class="label">Software Version:</span> <span id="details_soft_ver" class="value">--</span></p>
             <p><span class="label">App Status:</span> <span id="details_app_status" class="value">--</span></p>
             <p><span class="label">Error Code:</span> <span id="details_error_code" class="value">--</span></p>
@@ -352,6 +351,7 @@
                     updateCardValue(card, '.soil-moisture', data.adc0_val, ' mV');
                     updateCardValue(card, '.temperature', data.temp_adc1_c_val, ' °C');
                     updateCardValue(card, '.error-code', data.error_code || 'NO_ERROR');
+                    updateCardValue(card, '.last-watering-time', data.last_watering_time);
 
                     // --- 2. Update color coding and status ---
                     // Watering Mode UIの更新
@@ -402,7 +402,6 @@
                     if (detailsModal.style.display === 'flex' && detailsModal.dataset.deviceId === deviceId) {
                         document.getElementById('details_uptime').textContent = data.uptime || '--';
                         document.getElementById('details_device_time').textContent = data.device_time || '--';
-                        document.getElementById('details_last_watering_time').textContent = data.last_watering_time || '--';
                         document.getElementById('details_soft_ver').textContent = data.soft_ver || '--';
                         document.getElementById('details_app_status').textContent = data.app_status || '--';
                         document.getElementById('details_error_code').textContent = data.error_code || 'NO_ERROR';
@@ -464,6 +463,7 @@
                         <p><span class="label">Soil Moisture:</span> <span class="value soil-moisture">-- mV</span></p>
                         <p><span class="label">Temperature:</span> <span class="value temperature">-- &deg;C</span></p>
                         <p><span class="label">Error:</span> <span class="value error-code">--</span></p>
+                        <p><span class="label">Last Watering:</span> <span class="value last-watering-time">--</span></p>
                         <p><span class="label">Last Update:</span> <span class="value last-update">--</span></p>
                     </div>
                     <div class="card-actions">
@@ -763,7 +763,6 @@
                 // 初期表示は空にするか、最新のデータで埋める
                 document.getElementById('details_uptime').textContent = '--';
                 document.getElementById('details_device_time').textContent = '--';
-                document.getElementById('details_last_watering_time').textContent = '--';
                 document.getElementById('details_soft_ver').textContent = '--';
                 document.getElementById('details_app_status').textContent = '--';
                 document.getElementById('details_error_code').textContent = '--';
