@@ -318,6 +318,20 @@
                 }
             }
 
+            function updateCardValue(card, selector, value, suffix = '') {
+                const element = card.querySelector(selector);
+                if (element) {
+                    const stringValue = (value === null || typeof value === 'undefined' || value === '') ? '--' : String(value);
+                    const fullText = `${stringValue}${suffix}`;
+                    if (element.textContent !== fullText) {
+                        element.textContent = fullText;
+                        element.style.transition = 'background-color 0.2s';
+                        element.style.backgroundColor = '#cce5ff'; // Highlight color
+                        setTimeout(() => { element.style.backgroundColor = ''; }, 2000);
+                    }
+                }
+            }
+
             function onMessageArrived(message) {
                 try {
                     const topic = message.destinationName;
@@ -334,10 +348,10 @@
                     // --- 1. Update card content ---
                     const now = new Date();
                     const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
-                    card.querySelector('.last-update').textContent = timeString;
-                    card.querySelector('.soil-moisture').textContent = `${data.adc0_val || '--'} mV`;
-                    card.querySelector('.temperature').textContent = `${data.temp_adc1_c_val || '--'} °C`;
-                    card.querySelector('.error-code').textContent = data.error_code || 'NO_ERROR';
+                    updateCardValue(card, '.last-update', timeString);
+                    updateCardValue(card, '.soil-moisture', data.adc0_val, ' mV');
+                    updateCardValue(card, '.temperature', data.temp_adc1_c_val, ' °C');
+                    updateCardValue(card, '.error-code', data.error_code || 'NO_ERROR');
 
                     // --- 2. Update color coding and status ---
                     // Watering Mode UIの更新
