@@ -481,7 +481,7 @@
 
                 card.querySelector('.btn-manual-water').addEventListener('click', (e) => {
                     e.stopPropagation();
-                    publishMqttCommand(device.deviceId, { lo: { bit: 0, value: 1 } });
+                    publishMqttCommand(device.deviceId, { "manual_watering": 1 });
                 });
                 card.querySelector('.btn-edit-device').addEventListener('click', (e) => {
                     e.stopPropagation();
