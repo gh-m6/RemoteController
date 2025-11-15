@@ -232,6 +232,7 @@
             <p><span class="label">Uptime:</span> <span id="details_uptime" class="value">--</span></p>
             <p><span class="label">Device Time:</span> <span id="details_device_time" class="value">--</span></p>
             <p><span class="label">Software Version:</span> <span id="details_soft_ver" class="value">--</span></p>
+            <p><span class="label">Last Update:</span> <span id="details_last_update" class="value">--</span></p>
             <p><span class="label">App Status:</span> <span id="details_app_status" class="value">--</span></p>
             <p><span class="label">Error Code:</span> <span id="details_error_code" class="value">--</span></p>
 
@@ -317,15 +318,14 @@
                 }
             }
 
-            function updateCardValue(card, selector, value, suffix = '') {
-                const element = card.querySelector(selector);
+            function updateElementValue(element, value, suffix = '') {
                 if (element) {
                     const stringValue = (value === null || typeof value === 'undefined' || value === '') ? '--' : String(value);
                     const fullText = `${stringValue}${suffix}`;
                     if (element.textContent !== fullText) {
                         element.textContent = fullText;
                         element.style.transition = 'background-color 0.2s';
-                        element.style.backgroundColor = '#cce5ff'; // Highlight color
+                        element.style.backgroundColor = '#cce5ff'; // ハイライト色
                         setTimeout(() => { element.style.backgroundColor = ''; }, 2000);
                     }
                 }
@@ -346,12 +346,10 @@
 
                     // --- 1. Update card content ---
                     const now = new Date();
-                    const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
-                    updateCardValue(card, '.last-update', timeString);
-                    updateCardValue(card, '.soil-moisture', data.adc0_val, ' mV');
-                    updateCardValue(card, '.temperature', data.temp_adc1_c_val, ' °C');
-                    updateCardValue(card, '.error-code', data.error_code || 'NO_ERROR');
-                    updateCardValue(card, '.last-watering-time', data.last_watering_time);
+                    updateElementValue(card.querySelector('.soil-moisture'), data.adc0_val, ' mV');
+                    updateElementValue(card.querySelector('.temperature'), data.temp_adc1_c_val, ' °C');
+                    updateElementValue(card.querySelector('.error-code'), data.error_code || 'NO_ERROR');
+                    updateElementValue(card.querySelector('.last-watering-time'), data.last_watering_time);
 
                     // --- 2. Update color coding and status ---
                     // Watering Mode UIの更新
@@ -400,18 +398,20 @@
                     // --- 4. Update Device Details Modal if open ---
                     const detailsModal = document.getElementById('deviceDetailsModal');
                     if (detailsModal.style.display === 'flex' && detailsModal.dataset.deviceId === deviceId) {
-                        document.getElementById('details_uptime').textContent = data.uptime || '--';
-                        document.getElementById('details_device_time').textContent = data.device_time || '--';
-                        document.getElementById('details_soft_ver').textContent = data.soft_ver || '--';
-                        document.getElementById('details_app_status').textContent = data.app_status || '--';
-                        document.getElementById('details_error_code').textContent = data.error_code || 'NO_ERROR';
-                        document.getElementById('details_li0_state').textContent = data.li0_state || '--';
-                        document.getElementById('details_li1_state').textContent = data.li1_state || '--';
-                        document.getElementById('details_temp_adc1_c_val').textContent = `${data.temp_adc1_c_val || '--'} °C`;
-                        document.getElementById('details_adc0_val').textContent = `${data.adc0_val || '--'} mV`;
+                        const timeString = `${new Date().getHours().toString().padStart(2, '0')}:${new Date().getMinutes().toString().padStart(2, '0')}:${new Date().getSeconds().toString().padStart(2, '0')}`;
+                        updateElementValue(document.getElementById('details_uptime'), data.uptime);
+                        updateElementValue(document.getElementById('details_last_update'), timeString);
+                        updateElementValue(document.getElementById('details_device_time'), data.device_time);
+                        updateElementValue(document.getElementById('details_soft_ver'), data.soft_ver);
+                        updateElementValue(document.getElementById('details_app_status'), data.app_status);
+                        updateElementValue(document.getElementById('details_error_code'), data.error_code || 'NO_ERROR');
+                        updateElementValue(document.getElementById('details_li0_state'), data.li0_state);
+                        updateElementValue(document.getElementById('details_li1_state'), data.li1_state);
+                        updateElementValue(document.getElementById('details_temp_adc1_c_val'), data.temp_adc1_c_val, ' °C');
+                        updateElementValue(document.getElementById('details_adc0_val'), data.adc0_val, ' mV');
 
                         // 水やり設定の表示
-                        document.getElementById('details_watering_mode').textContent = data.watering_mode || 'MAINTENANCE';
+                        updateElementValue(document.getElementById('details_watering_mode'), data.watering_mode || 'MAINTENANCE');
 
                         // ポンプ制御ボタンの有効/無効
                         const pumpOnBtn = document.getElementById('details_maintenance_pump_on_btn');
@@ -424,10 +424,9 @@
                             pumpOffBtn.disabled = true;
                         }
                         // OUT0の状態も表示
-                        const out0State = document.getElementById('details_out0_state');
-                        if (out0State) {
-                            out0State.textContent = data.out0_state || '--';
-                            out0State.className = `value ${data.out0_class || ''}`;
+                        const out0StateElement = document.getElementById('details_out0_state');
+                        if (out0StateElement) {
+                            updateElementValue(out0StateElement, data.out0_state);
                         }
                     }
 
@@ -464,7 +463,6 @@
                         <p><span class="label">Temperature:</span> <span class="value temperature">-- &deg;C</span></p>
                         <p><span class="label">Error:</span> <span class="value error-code">--</span></p>
                         <p><span class="label">Last Watering:</span> <span class="value last-watering-time">--</span></p>
-                        <p><span class="label">Last Update:</span> <span class="value last-update">--</span></p>
                     </div>
                     <div class="card-actions">
                         <button class="btn btn-action btn-manual-water">Water Now</button>
@@ -763,6 +761,7 @@
                 // 初期表示は空にするか、最新のデータで埋める
                 document.getElementById('details_uptime').textContent = '--';
                 document.getElementById('details_device_time').textContent = '--';
+                document.getElementById('details_last_update').textContent = '--';
                 document.getElementById('details_soft_ver').textContent = '--';
                 document.getElementById('details_app_status').textContent = '--';
                 document.getElementById('details_error_code').textContent = '--';
