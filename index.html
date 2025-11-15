@@ -207,14 +207,14 @@
 </head>
 <body>
     <div class="container">
-        <h1>Remote Control</h1>
+        <h1>リモートコントロール</h1>
 
         <div class="toolbar">
-            <input type="text" id="searchInput" placeholder="Search by name...">
-            <button class="filter-btn" data-filter="all">All</button>
-            <button class="filter-btn" data-filter="error">Error</button>
-            <button class="filter-btn" data-filter="offline">Offline</button>
-            <button id="addDeviceBtn" class="btn-device-action" title="Add new device">+</button>
+            <input type="text" id="searchInput" placeholder="名前で検索...">
+            <button class="filter-btn" data-filter="all">すべて</button>
+            <button class="filter-btn" data-filter="error">エラー</button>
+            <button class="filter-btn" data-filter="offline">オフライン</button>
+            <button id="addDeviceBtn" class="btn-device-action" title="新しいデバイスを追加">+</button>
         </div>
 
         <div id="dashboard" class="dashboard-grid">
@@ -226,67 +226,67 @@
     <!-- Device Details Modal -->
     <div id="deviceDetailsModal" class="modal">
         <div class="device-details-modal-content">
-            <h2 id="detailsModalTitle">Device Details</h2>
+            <h2 id="detailsModalTitle">デバイス詳細</h2>
 
-            <h3>General Status</h3>
-            <p><span class="label">Uptime:</span> <span id="details_uptime" class="value">--</span></p>
-            <p><span class="label">Device Time:</span> <span id="details_device_time" class="value">--</span></p>
-            <p><span class="label">Software Version:</span> <span id="details_soft_ver" class="value">--</span></p>
-            <p><span class="label">Last Update:</span> <span id="details_last_update" class="value">--</span></p>
-            <p><span class="label">App Status:</span> <span id="details_app_status" class="value">--</span></p>
-            <p><span class="label">Error Code:</span> <span id="details_error_code" class="value">--</span></p>
+            <h3>一般ステータス</h3>
+            <p><span class="label">稼働時間:</span> <span id="details_uptime" class="value">--</span></p>
+            <p><span class="label">デバイス時刻:</span> <span id="details_device_time" class="value">--</span></p>
+            <p><span class="label">ソフトウェアバージョン:</span> <span id="details_soft_ver" class="value">--</span></p>
+            <p><span class="label">最終更新:</span> <span id="details_last_update" class="value">--</span></p>
+            <p><span class="label">アプリステータス:</span> <span id="details_app_status" class="value">--</span></p>
+            <p><span class="label">エラーコード:</span> <span id="details_error_code" class="value">--</span></p>
 
-            <h3>Sensors</h3>
+            <h3>センサー</h3>
             <p><span class="label">IN0:</span> <span id="details_li0_state" class="value">--</span></p>
             <p><span class="label">IN1:</span> <span id="details_li1_state" class="value">--</span></p>
-            <p><span class="label">Temperature:</span> <span id="details_temp_adc1_c_val" class="value">-- &deg;C</span></p>
-            <p><span class="label">Soil Moisture:</span> <span id="details_adc0_val" class="value">-- mV</span></p>
+            <p><span class="label">温度:</span> <span id="details_temp_adc1_c_val" class="value">-- &deg;C</span></p>
+            <p><span class="label">土壌水分量:</span> <span id="details_adc0_val" class="value">-- mV</span></p>
 
-            <h3>Watering Settings</h3>
-            <p><span class="label">Current Mode:</span> <span id="details_watering_mode" class="value">--</span></p>
+            <h3>水やり設定</h3>
+            <p><span class="label">現在のモード:</span> <span id="details_watering_mode" class="value">--</span></p>
             <!-- 水やり設定の編集フォームを削除 -->
 
-            <h3>Pump Control (Maintenance Mode)</h3>
-            <p><span class="label">OUT0 State:</span> <span id="details_out0_state" class="value">--</span></p>
+            <h3>ポンプ制御 (メンテナンスモード)</h3>
+            <p><span class="label">OUT0 状態:</span> <span id="details_out0_state" class="value">--</span></p>
             <div class="btn-group">
-                <button type="button" id="details_maintenance_pump_on_btn" class="btn btn-on">Force ON</button>
-                <button type="button" id="details_maintenance_pump_off_btn" class="btn btn-off">Force OFF</button>
+                <button type="button" id="details_maintenance_pump_on_btn" class="btn btn-on">強制ON</button>
+                <button type="button" id="details_maintenance_pump_off_btn" class="btn btn-off">強制OFF</button>
             </div>
 
             <div class="modal-buttons">
-                <button type="button" id="cancelDetailsBtn" class="btn">Close</button>
+                <button type="button" id="cancelDetailsBtn" class="btn">閉じる</button>
             </div>
         </div>
     </div>
 
     <div id="deviceModal" class="modal">
         <div class="modal-content">
-            <h2 id="modalTitle">Add Device</h2>
+            <h2 id="modalTitle">デバイスの追加</h2>
             <form id="deviceForm">
                 <input type="hidden" id="editDeviceId">
                 
-                <label for="deviceName">Nickname</label>
+                <label for="deviceName">ニックネーム</label>
                 <input type="text" id="deviceName" required>
 
-                <label for="deviceId">Device ID</label>
+                <label for="deviceId">デバイスID</label>
                 <input type="text" id="deviceId" required>
 
-                <label for="devicePassword">MQTT Password</label>
+                <label for="devicePassword">MQTT パスワード</label>
                 <input type="password" id="devicePassword">
-                <small>Leave blank to keep current password when editing.</small>
+                <small>編集時に現在のパスワードを維持する場合は空のままにしてください。</small>
 
-                <label for="deviceBroker">MQTT Broker Host</label>
+                <label for="deviceBroker">MQTTブローカーホスト</label>
                 <input type="text" id="deviceBroker" required>
 
-                <label for="deviceWsPort">MQTT WebSocket Port</label>
+                <label for="deviceWsPort">MQTT WebSocketポート</label>
                 <input type="number" id="deviceWsPort" required>
 
-                <label for="deviceUsername">MQTT Username</label>
+                <label for="deviceUsername">MQTT ユーザー名</label>
                 <input type="text" id="deviceUsername">
 
                 <div class="modal-buttons">
-                    <button type="button" id="cancelDeviceBtn">Cancel</button>
-                    <button type="submit" id="saveDeviceBtn">Save</button>
+                    <button type="button" id="cancelDeviceBtn">キャンセル</button>
+                    <button type="submit" id="saveDeviceBtn">保存</button>
                 </div>
             </form>
         </div>
@@ -299,24 +299,6 @@
             let serviceWorkerRegistration = null;
             // デフォルトの更新間隔60秒の1.5倍強に設定
             const STALE_DATA_TIMEOUT_MS = 95000;
-
-            function updateUI(id, value, className = null) {
-                const element = document.getElementById(id);
-                if (element) {
-                    const newClassName = className ? 'value ' + className : 'value';
-                    // 比較と表示のために、受け取った値を文字列に変換する
-                    // これにより、 '0' (文字列) と 0 (数値) が異なると判断される問題を回避する
-                    const stringValue = (value === null || typeof value === 'undefined') ? element.innerHTML : String(value);
-                    // 値またはクラス名が変更された場合にのみUIを更新し、ハイライトする
-                    if (element.innerHTML !== stringValue || element.className !== newClassName) {
-                        element.innerHTML = stringValue;
-                        element.className = newClassName;
-                        // ローカルWeb UIと同様のハイライト効果を適用
-                        element.style.backgroundColor = '#cce5ff';
-                        setTimeout(() => { element.style.backgroundColor = ''; }, 2000);
-                    }
-                }
-            }
 
             function updateElementValue(element, value, suffix = '') {
                 if (element) {
@@ -354,14 +336,6 @@
                     // --- 2. Update color coding and status ---
                     // Watering Mode UIの更新
                     updateModeSelectorUI(deviceId, data.watering_mode);
-
-                    // --- Update button states based on mode ---
-                    const manualWaterBtn = card.querySelector('.btn-manual-water');
-                    if (manualWaterBtn) {
-                        // Enable "Water Now" button only if mode is MANUAL
-                        manualWaterBtn.disabled = (data.watering_mode !== 'MANUAL');
-                    }
-
 
                     const header = card.querySelector('.card-header');
                     const statusIcon = card.querySelector('.card-status-icon');
@@ -441,7 +415,7 @@
                     message.destinationName = `devices/${deviceId}/control`;
                     mqttClient.send(message);
                 } else {
-                    alert("MQTT not connected. Cannot send command.");
+                    alert("MQTTに接続されていません。コマンドを送信できません。");
                 }
             }
 
@@ -459,17 +433,17 @@
                         <span class="card-status-icon">?</span>
                     </div>
                     <div class="card-body">
-                        <p><span class="label">Soil Moisture:</span> <span class="value soil-moisture">-- mV</span></p>
-                        <p><span class="label">Temperature:</span> <span class="value temperature">-- &deg;C</span></p>
-                        <p><span class="label">Error:</span> <span class="value error-code">--</span></p>
-                        <p><span class="label">Last Watering:</span> <span class="value last-watering-time">--</span></p>
+                        <p><span class="label">土壌水分量:</span> <span class="value soil-moisture">-- mV</span></p>
+                        <p><span class="label">温度:</span> <span class="value temperature">-- &deg;C</span></p>
+                        <p><span class="label">エラー:</span> <span class="value error-code">--</span></p>
+                        <p><span class="label">最終水やり:</span> <span class="value last-watering-time">--</span></p>
                     </div>
                     <div class="card-actions">
-                        <button class="btn btn-action btn-manual-water">Water Now</button>
-                        <button class="btn btn-device-action btn-edit-device" title="Edit">✎</button>
-                        <button class="btn btn-device-action btn-details-device" title="Details">...</button>
-                        <button class="btn btn-device-action btn-delete-device" title="Delete">🗑</button>
-                        <button class="btn btn-push btn-push-off" data-push-state="off">Enable Notifications</button>
+                        <button class="btn btn-action btn-manual-water">今すぐ水やり</button>
+                        <button class="btn btn-device-action btn-edit-device" title="編集">✎</button>
+                        <button class="btn btn-device-action btn-details-device" title="詳細">...</button>
+                        <button class="btn btn-device-action btn-delete-device" title="削除">🗑</button>
+                        <button class="btn btn-push btn-push-off" data-push-state="off">エラー通知を有効化</button>
                     </div>
                     <div class="mode-selector"></div>
                 `;
@@ -503,9 +477,6 @@
                     button.className = 'mode-btn';
                     button.dataset.mode = mode;
                     button.textContent = mode;
-                    if (mode === 'MAINTENANCE') { // Default active state
-                        button.classList.add('active');
-                    }
                     button.addEventListener('click', () => setWateringMode(device.deviceId, mode));
                     modeSelector.appendChild(button);
                 });
@@ -533,15 +504,15 @@
                 if (!card || !activeMode) return;
                 card.querySelectorAll('.mode-btn').forEach(btn => {
                     btn.classList.remove('active');
-                    if (btn.dataset.mode === activeMode) {
-                        // Update the "Water Now" button's state based on the new mode
-                        const manualWaterBtn = card.querySelector('.btn-manual-water');
-                        if (manualWaterBtn) {
-                            manualWaterBtn.disabled = (activeMode !== 'MANUAL');
-                        }
+                    if (btn.dataset.mode === activeMode) {                        
                         btn.classList.add('active');
                     }
                 });
+                // Update the "Water Now" button's state based on the new mode
+                const manualWaterBtn = card.querySelector('.btn-manual-water');
+                if (manualWaterBtn) {
+                    manualWaterBtn.disabled = (activeMode !== 'MANUAL');
+                }
             }
 
             // --- Event Listeners ---
@@ -549,9 +520,8 @@
             document.getElementById('cancelDeviceBtn').addEventListener('click', hideDeviceModal);
 
             function setWateringMode(deviceId, mode) {
-                 if (confirm(`Change watering mode to ${mode} and reboot the device?`)) {
+                 if (confirm(`水やりモードを「${mode}」に変更してデバイスを再起動しますか？`)) {
                     publishMqttCommand(deviceId, { set_watering_mode: mode });
-                    // Optimistic UI update
                     updateModeSelectorUI(deviceId, mode);
                 }
             }
@@ -604,11 +574,11 @@
                 const isSubscribedForThisDevice = pushButton.dataset.pushState === 'on';
 
                 if (isSubscribedForThisDevice) {
-                    pushButton.textContent = 'Disable Notifications';
+                    pushButton.textContent = '通知を無効化';
                     pushButton.classList.remove('btn-push-off');
                     pushButton.classList.add('btn-push-on');
                 } else {
-                    pushButton.textContent = 'Enable Notifications';
+                    pushButton.textContent = '通知を有効化';
                     pushButton.classList.remove('btn-push-on');
                     pushButton.classList.add('btn-push-off');
                 }
@@ -747,7 +717,6 @@
                     useSSL: true,
                     reconnect: true
                 };
-                updateUI('mqtt_status', 'Connecting...');
                 mqttClient.connect(connectOptions);
             }
 
@@ -814,19 +783,19 @@
                 const deviceIdInput = document.getElementById('deviceId');
 
                 if (device) { // Editing
-                    modalTitle.textContent = 'Edit Device';
+                    modalTitle.textContent = 'デバイスの編集';
                     editDeviceIdInput.value = device.deviceId;
                     
                     document.getElementById('deviceName').value = device.name;
                     deviceIdInput.value = device.deviceId;
                     deviceIdInput.readOnly = true;
-                    document.getElementById('devicePassword').placeholder = 'Leave blank to keep current password when editing.';
+                    document.getElementById('devicePassword').placeholder = 'パスワードを変更しない場合は空のままにしてください。';
                     document.getElementById('devicePassword').value = '';
                     document.getElementById('deviceBroker').value = device.broker;
                     document.getElementById('deviceWsPort').value = device.ws_port;
                     document.getElementById('deviceUsername').value = device.username;
                 } else { // Adding
-                    modalTitle.textContent = 'Add New Device';
+                    modalTitle.textContent = '新しいデバイスの追加';
                     editDeviceIdInput.value = '';
                     deviceIdInput.readOnly = false;
                     document.getElementById('devicePassword').placeholder = '';
@@ -855,7 +824,7 @@
                 };
 
                 if (!config.name || !config.deviceId || !config.broker || !config.ws_port) {
-                    alert('Please fill in all required fields.');
+                    alert('必須項目をすべて入力してください。');
                     return;
                 }
 
@@ -869,7 +838,7 @@
                     }
                 } else {
                     if (devices.some(d => d.deviceId === config.deviceId)) {
-                        alert('A device with this ID already exists.');
+                        alert('このIDのデバイスはすでに存在します。');
                         return;
                     }
                     devices.push(config);
@@ -881,7 +850,7 @@
             }
 
             function handleDeleteDevice(deviceId, deviceName) {
-                if (!confirm(`Are you sure you want to delete the device "${deviceName}"?`)) {
+                if (!confirm(`デバイス「${deviceName}」を本当に削除しますか？`)) {
                     return;
                 }
 
@@ -917,7 +886,7 @@
             renderDashboard();
             const initialDevices = loadDevices();
             if (initialDevices.length === 0) {
-                alert("No devices configured. Let's add your first one.");
+                alert("デバイスが設定されていません。最初のデバイスを追加しましょう。");
                 showDeviceModal();
             } else {
                 connectToMqtt();
@@ -938,16 +907,17 @@
                             //const pushButton = document.getElementById('pushSubscribeBtn');
                             // SW登録失敗時は、すべてのプッシュ通知ボタンを無効化
                             document.querySelectorAll('.btn-push').forEach(btn => {
-                                btn.disabled = true;
-                                btn.textContent = 'Push Not Available';
-                                btn.title = 'Service Worker registration failed. Push notifications are not available.';
+                                const span = document.createElement('span');
+                                span.className = 'push-status-text';
+                                span.textContent = 'プッシュ通知は利用できません';
+                                btn.parentNode.replaceChild(span, btn);
                             });
                         })
                         .finally(() => {
                             initializePushUI(); // SW登録の成否に関わらずUI初期化を実行
                         });
                 } else {
-                    console.warn('Push messaging is not supported');
+                    console.warn('プッシュ通知はサポートされていません');
                     // ブラウザがプッシュ通知をサポートしていない場合、すべてのボタンを無効化
                     document.querySelectorAll('.btn-push').forEach(btn => {
                         btn.disabled = true;
@@ -971,12 +941,10 @@
                             const deviceId = card.dataset.deviceId;
                             const pushButton = card.querySelector('.btn-push');
                             if (subscription) {
-                                pushButton.disabled = false;
                                 const isEnabled = enabledDevices.includes(deviceId);
                                 pushButton.dataset.pushState = isEnabled ? 'on' : 'off';
                             } else {
-                                // ブラウザが購読していない場合、すべてのボタンを無効化
-                                pushButton.disabled = true;
+                                // ブラウザが購読していない場合、購読を開始できる状態にする
                                 pushButton.dataset.pushState = 'off';
                             }
                             updatePushButtonUI(deviceId);
