@@ -593,14 +593,14 @@
                     .then(function(subscription) {
                         if (subscription) {
                             // バックエンドに購読解除を通知するエンドポイント
-                            const awsApiGatewayUnregisterUrl = 'https://fasg4dmog5.execute-api.ap-southeast-2.amazonaws.com/push/unregister-subscription';
+                            const awsApiGatewayUnregisterUrl = 'https://fasg4dmog5.execute-api.ap-southeast-2.amazonaws.com/unregister-subscription';
 
                             // サーバーに購読解除を通知 (deviceIdとendpointの両方を送る)
                             fetch(awsApiGatewayUnregisterUrl, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
-                                    deviceId: deviceId,
+                                    deviceId: deviceId, 
                                     endpoint: subscription.endpoint // どの購読を解除するかを特定するためにendpointを送信
                                 })
                             })
@@ -650,15 +650,18 @@
                 })
                 .then(function(subscription) {
                     console.log('User is subscribed:', subscription);
-                    const awsApiGatewayUrl = 'https://fasg4dmog5.execute-api.ap-southeast-2.amazonaws.com/push/register-subscription';
+                    const awsApiGatewayUrl = 'https://fasg4dmog5.execute-api.ap-southeast-2.amazonaws.com/register-subscription';
 
                     const deviceName = card.dataset.deviceName;
 
                     return fetch(awsApiGatewayUrl, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        // deviceId, nickname, subscriptionオブジェクトを送信する
-                        body: JSON.stringify({ deviceId: deviceId, nickname: deviceName, subscription: subscription })
+                        body: JSON.stringify({ 
+                            deviceId: deviceId, 
+                            nickname: deviceName, 
+                            subscription: subscription 
+                        })
                     });
                 })
                 .then(response => {
