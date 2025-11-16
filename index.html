@@ -609,15 +609,15 @@
                                 if (!response.ok) {
                                     throw new Error(`Server responded with ${response.status} on unregister.`);
                                 }
-                                console.log('Successfully unregistered on server.');
-                                // サーバーでの成功後、ローカルの状態を更新
-                                removeEnabledDevice(deviceId);
-                                pushButton.dataset.pushState = 'off';
+                                return response.json(); // レスポンスを次に渡す
+                            })
+                            .then(data => {
+                                console.log('Successfully unregistered on server:', data.message);
+                                removeEnabledDevice(deviceId); // サーバーでの成功後、ローカルの状態を更新
                             })
                             .catch(function(e) {
                                 console.error('Error during unsubscription process: ', e);
-                                alert('Failed to disable notifications. Please check the console.');
-                                pushButton.dataset.pushState = 'on'; // 失敗したので状態は購読中のまま
+                                alert('通知の無効化に失敗しました。コンソールでエラーを確認してください。');
                             }) 
                             .finally(function() {
                                 pushButton.disabled = false; // 処理完了後にボタンを有効化
@@ -626,12 +626,13 @@
                         } else {
                             // ブラウザの購読情報がない場合、ローカルの状態もクリアする
                             console.warn('Browser subscription not found. Clearing local state.');
+                            pushButton.disabled = false; // ボタンを有効化
+                            // 購読がないので、ローカルの有効デバイスリストもクリア
                             clearAllEnabledDevices();
                             document.querySelectorAll('.device-card').forEach(card => {
                                 card.querySelector('.btn-push').dataset.pushState = 'off';
                                 updatePushButtonUI(card.dataset.deviceId);
                             });
-                            pushButton.disabled = false; // ボタンを有効化
                         }
                     });
             }
