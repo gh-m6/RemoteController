@@ -613,9 +613,9 @@
                             if (!response.ok) { throw new Error(`Server error: ${response.status}`); }
                             return response.json();
                         }).then(data => {
-                            console.log('Successfully unsubscribed on server:', data.message);
+                            console.log('Successfully unsubscribed on server:', data.message);                            
                             removeEnabledDevice(deviceId);
-                            pushButton.dataset.pushState = 'off';
+                            pushButton.dataset.pushState = 'off'; // ローカルの状態を即時更新
                         }).catch(error => {
                             console.error('Failed to unsubscribe:', error);
                             alert('通知の無効化に失敗しました。コンソールでエラーを確認してください。');
@@ -659,14 +659,13 @@
                     if (!response.ok) {
                         throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
                     }
-                    console.log('Subscription saved successfully on server.');
+                    console.log('Subscription saved successfully on server.');                    
                     addEnabledDevice(deviceId); // ローカルの状態を更新
-                    pushButton.dataset.pushState = 'on';
+                    pushButton.dataset.pushState = 'on'; // ローカルの状態を即時更新
                 })
                 .catch(function(err) {
                     console.error('Failed to subscribe or save the subscription: ', err);
-                    alert('エラー通知の有効化に失敗しました。コンソールでエラーを確認してください。');
-                    pushButton.dataset.pushState = 'off'; // 失敗したので状態をリセット
+                    alert('通知の有効化に失敗しました。コンソールでエラーを確認してください。');
                 })
                 .finally(function() {
                     // 成功・失敗に関わらずUIを最終状態に更新
@@ -955,6 +954,21 @@
                 }
                 return outputArray;
             }
+
+            // --- Page Visibility Handling ---
+            document.addEventListener('visibilitychange', function() {
+                if (document.visibilityState === 'hidden') {
+                    // ページがバックグラウンドに移動したらMQTTを切断
+                    if (mqttClient && mqttClient.isConnected()) {
+                        console.log('Page is hidden, disconnecting MQTT.');
+                        mqttClient.disconnect();
+                    }
+                } else if (document.visibilityState === 'visible') {
+                    // ページがフォアグラウンドに戻ったらMQTTを再接続
+                    console.log('Page is visible, reconnecting MQTT.');
+                    connectToMqtt();
+                }
+            });
 
             initializePushNotifications();
         });
