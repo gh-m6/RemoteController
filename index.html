@@ -591,51 +591,38 @@
 
                 serviceWorkerRegistration.pushManager.getSubscription()
                     .then(function(subscription) {
-                        if (subscription) {
-                            // バックエンドに購読解除を通知するエンドポイント
-                            const awsApiGatewayUnregisterUrl = 'https://fasg4dmog5.execute-api.ap-southeast-2.amazonaws.com/unregister-subscription';
-
-                            // サーバーに購読解除を通知 (deviceIdとendpointの両方を送る)
-                            fetch(awsApiGatewayUnregisterUrl, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                    deviceId: deviceId, 
-                                    endpoint: subscription.endpoint // どの購読を解除するかを特定するためにendpointを送信
-                                })
-                            })
-                            .then(response => {
-                                // サーバー側で失敗しても、UIの更新は行わない（ユーザーが再試行できるように）
-                                if (!response.ok) {
-                                    throw new Error(`Server responded with ${response.status} on unregister.`);
-                                }
-                                return response.json();
-                            })
-                            .then(data => {
-                                console.log('Successfully unregistered on server:', data.message);
-                                removeEnabledDevice(deviceId); // サーバーでの成功後、ローカルの状態を更新
-                                pushButton.dataset.pushState = 'off'; // UIの状態を更新
-                                return; // 成功したのでここで終了
-                            })
-                            .catch(function(e) {
-                                console.error('Error during unsubscription process: ', e);
-                                alert('通知の無効化に失敗しました。コンソールでエラーを確認してください。');
-                            }) 
-                            .finally(function() {
-                                pushButton.disabled = false; // 処理完了後にボタンを有効化
-                                updatePushButtonUI(deviceId); // 最終的な状態でUIを更新
-                            });
-                        } else {
+                        if (!subscription) {
                             // ブラウザの購読情報がない場合、ローカルの状態もクリアする
                             console.warn('Browser subscription not found. Clearing local state.');
                             pushButton.disabled = false; // ボタンを有効化
-                            // 購読がないので、ローカルの有効デバイスリストもクリア
                             clearAllEnabledDevices();
                             document.querySelectorAll('.device-card').forEach(card => {
                                 card.querySelector('.btn-push').dataset.pushState = 'off';
                                 updatePushButtonUI(card.dataset.deviceId);
                             });
+                            return; // 処理を終了
                         }
+
+                        // バックエンドに購読解除を通知
+                        const awsApiGatewayUnregisterUrl = 'https://fasg4dmog5.execute-api.ap-southeast-2.amazonaws.com/unregister-subscription';
+                        fetch(awsApiGatewayUnregisterUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ deviceId: deviceId, endpoint: subscription.endpoint })
+                        }).then(response => {
+                            if (!response.ok) { throw new Error(`Server error: ${response.status}`); }
+                            return response.json();
+                        }).then(data => {
+                            console.log('Successfully unsubscribed on server:', data.message);
+                            removeEnabledDevice(deviceId);
+                            pushButton.dataset.pushState = 'off';
+                        }).catch(error => {
+                            console.error('Failed to unsubscribe:', error);
+                            alert('通知の無効化に失敗しました。コンソールでエラーを確認してください。');
+                        }).finally(() => {
+                            pushButton.disabled = false;
+                            updatePushButtonUI(deviceId);
+                        });
                     });
             }
 
