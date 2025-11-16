@@ -593,7 +593,7 @@
                     .then(function(subscription) {
                         if (subscription) {
                             // バックエンドに購読解除を通知するエンドポイント
-                            const awsApiGatewayUnregisterUrl = 'https://fasg4dmog5.execute-api.ap-southeast-2.amazonaws.com/unregister-subscription';
+                            const awsApiGatewayUnregisterUrl = 'https://fasg4dmog5.execute-api.ap-southeast-2.amazonaws.com/push/unregister-subscription';
 
                             // サーバーに購読解除を通知 (deviceIdとendpointの両方を送る)
                             fetch(awsApiGatewayUnregisterUrl, {
