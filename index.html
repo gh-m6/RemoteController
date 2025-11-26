@@ -678,10 +678,12 @@
                 const devices = loadDevices();
                 if (devices.length === 0) return;
 
-                // Use the first device's config for connection, as broker should be the same.
-                const connectionConfig = devices[0];
+                // 最後に保存されたデバイスの設定を接続情報として使用する
+                // これにより、ユーザーが編集した最新の設定が反映される
+                const connectionConfig = devices[devices.length - 1];
 
                 if (mqttClient && mqttClient.isConnected()) {
+                    // 接続情報が変更された可能性があるため、一度切断する
                     mqttClient.disconnect();
                 }
 
